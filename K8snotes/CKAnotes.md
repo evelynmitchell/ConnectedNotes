@@ -16,6 +16,7 @@ Internet -> Ingress
   May be of several types, the standard Ingress and igress-nginx (which is more like a load balancer). 
   I'm not sure how istio, fabric or other service meshes fit in, but likely they exist not at this layer, which is fairly static, 
   or at the pod layer, which is more at the hardware layer, but at the service layer.
+  ```
   Ingress
      node1
         service1
@@ -29,12 +30,14 @@ Internet -> Ingress
             container5
             container6
         service2
+```
 
 Need both an ingress controller, and an ingress resource. [[Resources]] are the hardware required to do the thing. An ingress resource will include a rewrite rule 
 to pass traffic to a service. [[Controller]]s are the description of the desired state of the resource, 
 similar to a puppet module or ansible playbook. The Controller ensures that the right number and location of resources are available.
 
 Example ingress controller nginx (yaml):
+```
     apiVersion: networking.k8s.io/v1beta1
     kind: Ingress
     metadata:
@@ -50,8 +53,10 @@ Example ingress controller nginx (yaml):
             backend:
               serviceName: test
               servicePort: 80
+```
 
 Example ingress controller (GCE):
+```
     apiVersion: networking.k8s.io/v1beta1
     kind: Ingress
     metadata:
@@ -71,6 +76,7 @@ Example ingress controller (GCE):
             backend:
               serviceName: my-discounted-products
               servicePort: 80
+```
 
 In both of those controllers, traffic coming into the ingress IP gets routed to http server paths (/testpath, /, /discounted), 
 which are served by different services (test, my-products, my-discounted-products), which could be running on containers or
@@ -82,4 +88,6 @@ required to implement it, as the IP routing happens at the service level, not at
 (overylay networks) level.
 
 #### Ingress commands
-kubect 
+```
+kubectl
+```
