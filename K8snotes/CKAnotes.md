@@ -16,6 +16,7 @@ Internet -> Ingress
   May be of several types, the standard Ingress and igress-nginx (which is more like a load balancer). 
   I'm not sure how istio, fabric or other service meshes fit in, but likely they exist not at this layer, which is fairly static, 
   or at the pod layer, which is more at the hardware layer, but at the service layer.
+
   ```
   Ingress
      node1
@@ -37,6 +38,7 @@ to pass traffic to a service. [[Controller]]s are the description of the desired
 similar to a puppet module or ansible playbook. The Controller ensures that the right number and location of resources are available.
 
 Example ingress controller nginx (yaml):
+
 ```
     apiVersion: networking.k8s.io/v1beta1
     kind: Ingress
@@ -56,6 +58,7 @@ Example ingress controller nginx (yaml):
 ```
 
 Example ingress controller (GCE):
+
 ```
     apiVersion: networking.k8s.io/v1beta1
     kind: Ingress
@@ -88,6 +91,8 @@ required to implement it, as the IP routing happens at the service level, not at
 (overylay networks) level.
 
 #### Ingress commands
+
 ```
 kubectl
 ```
+
