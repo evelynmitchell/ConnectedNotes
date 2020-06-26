@@ -1,5 +1,7 @@
 # Foam
 
+From: https://foambubble.github.io/foam/
+
 We've created a few Bubbles (markdown documents) to get you started.
 
 Feel free to use them or delete them. Your Foam, your rules.
