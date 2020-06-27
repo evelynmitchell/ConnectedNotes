@@ -1149,6 +1149,23 @@ resources:
       - identity: {}
 ```
 
+Copy the file 
+
+```
+for instance in controller-0 controller-1 controller-2; do
+  gcloud compute scp encryption-config.yaml ${instance}:~/
+done
+
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+encryption-config.yaml                                                                                                      100%  240     6.5KB/s   00:00    
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+encryption-config.yaml                                                                                                      100%  240     6.3KB/s   00:00    
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+encryption-config.yaml                                                                                                      100%  240     6.7KB/s   00:00    
+
+```
+
+
 
 
 
