@@ -350,6 +350,8 @@ Connection to 35.226.68.16 closed.
 
 
 Note that the { } here are a grouping in bash, not json.
+The reason using {} is so that the changes are executed within the original shell context, rather than creating a subshell which would not share the same enviornment variables.
+
 
 ```
 {
@@ -2264,6 +2266,729 @@ f98dc20bce6225a0, started, controller-0, https://10.240.0.10:2380, https://10.24
 ffed16798470cab5, started, controller-1, https://10.240.0.11:2380, https://10.240.0.11:2379, false
 
 ```
+
+
+## Bootstrapping the Kubernetes Control Plane
+
+In this lab you will bootstrap the Kubernetes control plane across three compute instances and configure it for high availability. You will also create an external load balancer that exposes the Kubernetes API Servers to remote clients. The following components will be installed on each node: Kubernetes API Server, Scheduler, and Controller Manager.
+
+These commands are run on each controller-{0,1,2}
+
+```
+efm@controller-0:~$ sudo mkdir -p /etc/kubernetes/config
+efm@controller-0:~$ wget -q --show-progress --https-only --timestamping \
+>   "https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kube-apiserver" \
+>   "https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kube-controller-manager" \
+>   "https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kube-scheduler" \
+>   "https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl"
+kube-apiserver                          100%[=============================================================================>] 156.90M   204MB/s    in 0.8s    
+kube-controller-manager                 100%[=============================================================================>] 111.03M   165MB/s    in 0.7s    
+kube-scheduler                          100%[=============================================================================>]  36.99M  60.7MB/s    in 0.6s    
+kubectl                                 100%[=============================================================================>]  40.99M   162MB/s    in 0.3s    
+efm@controller-0:~$ {
+>   chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl
+>   sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
+> }
+
+{
+  sudo mkdir -p /var/lib/kubernetes/
+
+  sudo mv ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+    service-account-key.pem service-account.pem \
+    encryption-config.yaml /var/lib/kubernetes/
+}
+efm@controller-0:~$ {
+>   sudo mkdir -p /var/lib/kubernetes/
+> 
+>   sudo mv ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+>     service-account-key.pem service-account.pem \
+>     encryption-config.yaml /var/lib/kubernetes/
+> }
+
+efm@controller-0:~$ INTERNAL_IP=$(curl -s -H "Metadata-Flavor: Google" \
+>   http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip)
+
+efm@controller-0:~$ cat <<EOF | sudo tee /etc/systemd/system/kube-apiserver.service
+> [Unit]
+> Description=Kubernetes API Server
+> Documentation=https://github.com/kubernetes/kubernetes
+> 
+> [Service]
+> ExecStart=/usr/local/bin/kube-apiserver \\
+>   --advertise-address=${INTERNAL_IP} \\
+>   --allow-privileged=true \\
+>   --apiserver-count=3 \\
+>   --audit-log-maxage=30 \\
+>   --audit-log-maxbackup=3 \\
+>   --audit-log-maxsize=100 \\
+>   --audit-log-path=/var/log/audit.log \\
+>   --authorization-mode=Node,RBAC \\
+>   --bind-address=0.0.0.0 \\
+>   --client-ca-file=/var/lib/kubernetes/ca.pem \\
+>   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \\
+>   --etcd-cafile=/var/lib/kubernetes/ca.pem \\
+>   --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \\
+>   --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \\
+>   --etcd-servers=https://10.240.0.10:2379,https://10.240.0.11:2379,https://10.240.0.12:2379 \\
+>   --event-ttl=1h \\
+>   --encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \\
+>   --kubelet-certificate-authority=/var/lib/kubernetes/ca.pem \\
+>   --kubelet-client-certificate=/var/lib/kubernetes/kubernetes.pem \\
+>   --kubelet-client-key=/var/lib/kubernetes/kubernetes-key.pem \\
+>   --kubelet-https=true \\
+>   --runtime-config=api/all \\
+>   --service-account-key-file=/var/lib/kubernetes/service-account.pem \\
+>   --service-cluster-ip-range=10.32.0.0/24 \\
+>   --service-node-port-range=30000-32767 \\
+>   --tls-cert-file=/var/lib/kubernetes/kubernetes.pem \\
+>   --tls-private-key-file=/var/lib/kubernetes/kubernetes-key.pem \\
+>   --v=2
+> Restart=on-failure
+> RestartSec=5
+> 
+> [Install]
+> WantedBy=multi-user.target
+> EOF
+[Unit]
+Description=Kubernetes API Server
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-apiserver \
+  --advertise-address=10.240.0.10 \
+  --allow-privileged=true \
+  --apiserver-count=3 \
+  --audit-log-maxage=30 \
+  --audit-log-maxbackup=3 \
+  --audit-log-maxsize=100 \
+  --audit-log-path=/var/log/audit.log \
+  --authorization-mode=Node,RBAC \
+  --bind-address=0.0.0.0 \
+  --client-ca-file=/var/lib/kubernetes/ca.pem \
+  --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
+  --etcd-cafile=/var/lib/kubernetes/ca.pem \
+  --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \
+  --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \
+  --etcd-servers=https://10.240.0.10:2379,https://10.240.0.11:2379,https://10.240.0.12:2379 \
+  --event-ttl=1h \
+  --encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \
+  --kubelet-certificate-authority=/var/lib/kubernetes/ca.pem \
+  --kubelet-client-certificate=/var/lib/kubernetes/kubernetes.pem \
+  --kubelet-client-key=/var/lib/kubernetes/kubernetes-key.pem \
+  --kubelet-https=true \
+  --runtime-config=api/all \
+  --service-account-key-file=/var/lib/kubernetes/service-account.pem \
+  --service-cluster-ip-range=10.32.0.0/24 \
+  --service-node-port-range=30000-32767 \
+  --tls-cert-file=/var/lib/kubernetes/kubernetes.pem \
+  --tls-private-key-file=/var/lib/kubernetes/kubernetes-key.pem \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+efm@controller-0:~$ sudo mv kube-controller-manager.kubeconfig /var/lib/kubernetes/
+
+efm@controller-0:~$ cat <<EOF | sudo tee /etc/systemd/system/kube-controller-manager.service
+> [Unit]
+> Description=Kubernetes Controller Manager
+> Documentation=https://github.com/kubernetes/kubernetes
+> 
+> [Service]
+> ExecStart=/usr/local/bin/kube-controller-manager \\
+>   --address=0.0.0.0 \\
+>   --cluster-cidr=10.200.0.0/16 \\
+>   --cluster-name=kubernetes \\
+>   --cluster-signing-cert-file=/var/lib/kubernetes/ca.pem \\
+>   --cluster-signing-key-file=/var/lib/kubernetes/ca-key.pem \\
+>   --kubeconfig=/var/lib/kubernetes/kube-controller-manager.kubeconfig \\
+>   --leader-elect=true \\
+>   --root-ca-file=/var/lib/kubernetes/ca.pem \\
+>   --service-account-private-key-file=/var/lib/kubernetes/service-account-key.pem \\
+>   --service-cluster-ip-range=10.32.0.0/24 \\
+>   --use-service-account-credentials=true \\
+>   --v=2
+> Restart=on-failure
+> RestartSec=5
+> 
+> [Install]
+> WantedBy=multi-user.target
+> EOF
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-controller-manager \
+  --address=0.0.0.0 \
+  --cluster-cidr=10.200.0.0/16 \
+  --cluster-name=kubernetes \
+  --cluster-signing-cert-file=/var/lib/kubernetes/ca.pem \
+  --cluster-signing-key-file=/var/lib/kubernetes/ca-key.pem \
+  --kubeconfig=/var/lib/kubernetes/kube-controller-manager.kubeconfig \
+  --leader-elect=true \
+  --root-ca-file=/var/lib/kubernetes/ca.pem \
+  --service-account-private-key-file=/var/lib/kubernetes/service-account-key.pem \
+  --service-cluster-ip-range=10.32.0.0/24 \
+  --use-service-account-credentials=true \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+efm@controller-0:~$ sudo mv kube-scheduler.kubeconfig /var/lib/kubernetes/
+
+efm@controller-0:~$ cat <<EOF | sudo tee /etc/kubernetes/config/kube-scheduler.yaml
+> apiVersion: kubescheduler.config.k8s.io/v1alpha1
+> kind: KubeSchedulerConfiguration
+> clientConnection:
+>   kubeconfig: "/var/lib/kubernetes/kube-scheduler.kubeconfig"
+> leaderElection:
+>   leaderElect: true
+> EOF
+apiVersion: kubescheduler.config.k8s.io/v1alpha1
+kind: KubeSchedulerConfiguration
+clientConnection:
+  kubeconfig: "/var/lib/kubernetes/kube-scheduler.kubeconfig"
+leaderElection:
+  leaderElect: true
+
+efm@controller-0:~$ cat <<EOF | sudo tee /etc/systemd/system/kube-scheduler.service
+> [Unit]
+> Description=Kubernetes Scheduler
+> Documentation=https://github.com/kubernetes/kubernetes
+> 
+> [Service]
+> ExecStart=/usr/local/bin/kube-scheduler \\
+>   --config=/etc/kubernetes/config/kube-scheduler.yaml \\
+>   --v=2
+> Restart=on-failure
+> RestartSec=5
+> 
+> [Install]
+> WantedBy=multi-user.target
+> EOF
+[Unit]
+Description=Kubernetes Scheduler
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-scheduler \
+  --config=/etc/kubernetes/config/kube-scheduler.yaml \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+efm@controller-0:~$ {
+>   sudo systemctl daemon-reload
+>   sudo systemctl enable kube-apiserver kube-controller-manager kube-scheduler
+>   sudo systemctl start kube-apiserver kube-controller-manager kube-scheduler
+> }
+Created symlink /etc/systemd/system/multi-user.target.wants/kube-apiserver.service → /etc/systemd/system/kube-apiserver.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/kube-controller-manager.service → /etc/systemd/system/kube-controller-manager.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/kube-scheduler.service → /etc/systemd/system/kube-scheduler.service.
+
+### Enable http health checks
+
+```
+efm@controller-0:~$ sudo apt-get update
+Hit:1 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic InRelease
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates InRelease [88.7 kB]  
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-backports InRelease [74.6 kB]
+Get:4 http://security.ubuntu.com/ubuntu bionic-security InRelease [88.7 kB]                
+Get:5 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/universe amd64 Packages [8570 kB]                   
+Get:6 http://archive.canonical.com/ubuntu bionic InRelease [10.2 kB]                                                 
+Get:7 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/universe Translation-en [4941 kB]
+Get:8 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/multiverse amd64 Packages [151 kB]
+Get:9 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/multiverse Translation-en [108 kB]
+Get:10 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/restricted amd64 Packages [69.6 kB]
+Get:11 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/universe amd64 Packages [1086 kB]
+Get:12 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/universe Translation-en [337 kB]
+Get:13 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/multiverse amd64 Packages [11.3 kB]
+Get:14 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/multiverse Translation-en [4804 B]
+Get:15 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-backports/main amd64 Packages [7516 B]
+Get:16 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-backports/main Translation-en [4764 B]
+Get:17 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-backports/universe amd64 Packages [7484 B]
+Get:18 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-backports/universe Translation-en [4436 B]
+Get:19 http://security.ubuntu.com/ubuntu bionic-security/universe amd64 Packages [674 kB] 
+Get:20 http://security.ubuntu.com/ubuntu bionic-security/universe Translation-en [224 kB]
+Get:21 http://security.ubuntu.com/ubuntu bionic-security/multiverse amd64 Packages [7696 B]
+Get:22 http://security.ubuntu.com/ubuntu bionic-security/multiverse Translation-en [2792 B]
+Get:23 http://archive.canonical.com/ubuntu bionic/partner amd64 Packages [2288 B]     
+Get:24 http://archive.canonical.com/ubuntu bionic/partner Translation-en [1332 B]
+Fetched 16.5 MB in 4s (4693 kB/s) 
+Reading package lists... Done
+efm@controller-0:~$ sudo apt-get install -y nginx
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following packages were automatically installed and are no longer required:
+  grub-pc-bin libnuma1
+Use 'sudo apt autoremove' to remove them.
+The following additional packages will be installed:
+  fontconfig-config fonts-dejavu-core libfontconfig1 libgd3 libjbig0 libjpeg-turbo8 libjpeg8 libnginx-mod-http-geoip libnginx-mod-http-image-filter
+  libnginx-mod-http-xslt-filter libnginx-mod-mail libnginx-mod-stream libtiff5 libwebp6 libxpm4 nginx-common nginx-core
+Suggested packages:
+  libgd-tools fcgiwrap nginx-doc ssl-cert
+The following NEW packages will be installed:
+  fontconfig-config fonts-dejavu-core libfontconfig1 libgd3 libjbig0 libjpeg-turbo8 libjpeg8 libnginx-mod-http-geoip libnginx-mod-http-image-filter
+  libnginx-mod-http-xslt-filter libnginx-mod-mail libnginx-mod-stream libtiff5 libwebp6 libxpm4 nginx nginx-common nginx-core
+0 upgraded, 18 newly installed, 0 to remove and 0 not upgraded.
+Need to get 2462 kB of archives.
+After this operation, 8210 kB of additional disk space will be used.
+Get:1 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libjpeg-turbo8 amd64 1.5.2-0ubuntu5.18.04.4 [110 kB]
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 fonts-dejavu-core all 2.37-1 [1041 kB]
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 fontconfig-config all 2.12.6-0ubuntu2 [55.8 kB]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 libfontconfig1 amd64 2.12.6-0ubuntu2 [137 kB]
+Get:5 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 libjpeg8 amd64 8c-2ubuntu8 [2194 B]
+Get:6 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 libjbig0 amd64 2.1-3.1build1 [26.7 kB]
+Get:7 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libtiff5 amd64 4.0.9-5ubuntu0.3 [153 kB]
+Get:8 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 libwebp6 amd64 0.6.1-2 [185 kB]
+Get:9 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 libxpm4 amd64 1:3.5.12-1 [34.0 kB]
+Get:10 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libgd3 amd64 2.2.5-4ubuntu0.4 [119 kB]
+Get:11 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 nginx-common all 1.14.0-0ubuntu1.7 [37.4 kB]
+Get:12 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libnginx-mod-http-geoip amd64 1.14.0-0ubuntu1.7 [11.2 kB]
+Get:13 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libnginx-mod-http-image-filter amd64 1.14.0-0ubuntu1.7 [14.6 kB]
+Get:14 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libnginx-mod-http-xslt-filter amd64 1.14.0-0ubuntu1.7 [13.0 kB]
+Get:15 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libnginx-mod-mail amd64 1.14.0-0ubuntu1.7 [41.8 kB]
+Get:16 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 libnginx-mod-stream amd64 1.14.0-0ubuntu1.7 [63.7 kB]
+Get:17 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 nginx-core amd64 1.14.0-0ubuntu1.7 [413 kB]
+Get:18 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates/main amd64 nginx all 1.14.0-0ubuntu1.7 [3596 B]
+Fetched 2462 kB in 0s (35.6 MB/s)
+Preconfiguring packages ...
+Selecting previously unselected package libjpeg-turbo8:amd64.
+(Reading database ... 65436 files and directories currently installed.)
+Preparing to unpack .../00-libjpeg-turbo8_1.5.2-0ubuntu5.18.04.4_amd64.deb ...
+Unpacking libjpeg-turbo8:amd64 (1.5.2-0ubuntu5.18.04.4) ...
+Selecting previously unselected package fonts-dejavu-core.
+Preparing to unpack .../01-fonts-dejavu-core_2.37-1_all.deb ...
+Unpacking fonts-dejavu-core (2.37-1) ...
+Selecting previously unselected package fontconfig-config.
+Preparing to unpack .../02-fontconfig-config_2.12.6-0ubuntu2_all.deb ...
+Unpacking fontconfig-config (2.12.6-0ubuntu2) ...
+Selecting previously unselected package libfontconfig1:amd64.
+Preparing to unpack .../03-libfontconfig1_2.12.6-0ubuntu2_amd64.deb ...
+Unpacking libfontconfig1:amd64 (2.12.6-0ubuntu2) ...
+Selecting previously unselected package libjpeg8:amd64.
+Preparing to unpack .../04-libjpeg8_8c-2ubuntu8_amd64.deb ...
+Unpacking libjpeg8:amd64 (8c-2ubuntu8) ...
+Selecting previously unselected package libjbig0:amd64.
+Preparing to unpack .../05-libjbig0_2.1-3.1build1_amd64.deb ...
+Unpacking libjbig0:amd64 (2.1-3.1build1) ...
+Selecting previously unselected package libtiff5:amd64.
+Preparing to unpack .../06-libtiff5_4.0.9-5ubuntu0.3_amd64.deb ...
+Unpacking libtiff5:amd64 (4.0.9-5ubuntu0.3) ...
+Selecting previously unselected package libwebp6:amd64.
+Preparing to unpack .../07-libwebp6_0.6.1-2_amd64.deb ...
+Unpacking libwebp6:amd64 (0.6.1-2) ...
+Selecting previously unselected package libxpm4:amd64.
+Preparing to unpack .../08-libxpm4_1%3a3.5.12-1_amd64.deb ...
+Unpacking libxpm4:amd64 (1:3.5.12-1) ...
+Selecting previously unselected package libgd3:amd64.
+Preparing to unpack .../09-libgd3_2.2.5-4ubuntu0.4_amd64.deb ...
+Unpacking libgd3:amd64 (2.2.5-4ubuntu0.4) ...
+Selecting previously unselected package nginx-common.
+Preparing to unpack .../10-nginx-common_1.14.0-0ubuntu1.7_all.deb ...
+Unpacking nginx-common (1.14.0-0ubuntu1.7) ...
+Selecting previously unselected package libnginx-mod-http-geoip.
+Preparing to unpack .../11-libnginx-mod-http-geoip_1.14.0-0ubuntu1.7_amd64.deb ...
+Unpacking libnginx-mod-http-geoip (1.14.0-0ubuntu1.7) ...
+Selecting previously unselected package libnginx-mod-http-image-filter.
+Preparing to unpack .../12-libnginx-mod-http-image-filter_1.14.0-0ubuntu1.7_amd64.deb ...
+Unpacking libnginx-mod-http-image-filter (1.14.0-0ubuntu1.7) ...
+Selecting previously unselected package libnginx-mod-http-xslt-filter.
+Preparing to unpack .../13-libnginx-mod-http-xslt-filter_1.14.0-0ubuntu1.7_amd64.deb ...
+Unpacking libnginx-mod-http-xslt-filter (1.14.0-0ubuntu1.7) ...
+Selecting previously unselected package libnginx-mod-mail.
+Preparing to unpack .../14-libnginx-mod-mail_1.14.0-0ubuntu1.7_amd64.deb ...
+Unpacking libnginx-mod-mail (1.14.0-0ubuntu1.7) ...
+Selecting previously unselected package libnginx-mod-stream.
+Preparing to unpack .../15-libnginx-mod-stream_1.14.0-0ubuntu1.7_amd64.deb ...
+Unpacking libnginx-mod-stream (1.14.0-0ubuntu1.7) ...
+Selecting previously unselected package nginx-core.
+Preparing to unpack .../16-nginx-core_1.14.0-0ubuntu1.7_amd64.deb ...
+Unpacking nginx-core (1.14.0-0ubuntu1.7) ...
+Selecting previously unselected package nginx.
+Preparing to unpack .../17-nginx_1.14.0-0ubuntu1.7_all.deb ...
+Unpacking nginx (1.14.0-0ubuntu1.7) ...
+Setting up libjbig0:amd64 (2.1-3.1build1) ...
+Setting up fonts-dejavu-core (2.37-1) ...
+Setting up nginx-common (1.14.0-0ubuntu1.7) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/nginx.service → /lib/systemd/system/nginx.service.
+Setting up libjpeg-turbo8:amd64 (1.5.2-0ubuntu5.18.04.4) ...
+Setting up libnginx-mod-mail (1.14.0-0ubuntu1.7) ...
+Setting up libxpm4:amd64 (1:3.5.12-1) ...
+Setting up libnginx-mod-http-xslt-filter (1.14.0-0ubuntu1.7) ...
+Setting up libnginx-mod-http-geoip (1.14.0-0ubuntu1.7) ...
+Setting up libwebp6:amd64 (0.6.1-2) ...
+Setting up libjpeg8:amd64 (8c-2ubuntu8) ...
+Setting up fontconfig-config (2.12.6-0ubuntu2) ...
+Setting up libnginx-mod-stream (1.14.0-0ubuntu1.7) ...
+Setting up libtiff5:amd64 (4.0.9-5ubuntu0.3) ...
+Setting up libfontconfig1:amd64 (2.12.6-0ubuntu2) ...
+Setting up libgd3:amd64 (2.2.5-4ubuntu0.4) ...
+Setting up libnginx-mod-http-image-filter (1.14.0-0ubuntu1.7) ...
+Setting up nginx-core (1.14.0-0ubuntu1.7) ...
+Setting up nginx (1.14.0-0ubuntu1.7) ...
+Processing triggers for systemd (237-3ubuntu10.41) ...
+Processing triggers for man-db (2.8.3-2ubuntu0.1) ...
+Processing triggers for ufw (0.36-0ubuntu0.18.04.1) ...
+Processing triggers for ureadahead (0.100.0-21) ...
+Processing triggers for libc-bin (2.27-3ubuntu1) ...
+```
+
+efm@controller-0:~$ {
+>   sudo mv kubernetes.default.svc.cluster.local \
+>     /etc/nginx/sites-available/kubernetes.default.svc.cluster.local
+> 
+>   sudo ln -s /etc/nginx/sites-available/kubernetes.default.svc.cluster.local /etc/nginx/sites-enabled/
+> }
+
+efm@controller-0:~$ sudo systemctl restart nginx
+efm@controller-0:~$ sudo systemctl enable nginx
+Synchronizing state of nginx.service with SysV service script with /lib/systemd/systemd-sysv-install.
+Executing: /lib/systemd/systemd-sysv-install enable nginx
+
+efm@controller-0:~$ kubectl get componentstatuses --kubeconfig admin.kubeconfig
+NAME                 STATUS    MESSAGE             ERROR
+scheduler            Healthy   ok                  
+etcd-1               Healthy   {"health":"true"}   
+controller-manager   Healthy   ok                  
+etcd-2               Healthy   {"health":"true"}   
+etcd-0               Healthy   {"health":"true"}   
+
+efm@controller-0:~$ curl -H "Host: kubernetes.default.svc.cluster.local" -i http://127.0.0.1/healthz
+HTTP/1.1 200 OK
+Server: nginx/1.14.0 (Ubuntu)
+Date: Sat, 27 Jun 2020 17:18:45 GMT
+Content-Type: text/plain; charset=utf-8
+Content-Length: 2
+Connection: keep-alive
+X-Content-Type-Options: nosniff
+
+### RBAC for Kubelet Authorization
+
+```
+cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-apiserver-to-kubelet
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes/proxy
+      - nodes/stats
+      - nodes/log
+      - nodes/spec
+      - nodes/metrics
+    verbs:
+      - "*"
+EOF
+
+efm@controller-0:~$ cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
+> apiVersion: rbac.authorization.k8s.io/v1beta1
+> kind: ClusterRole
+> metadata:
+>   annotations:
+>     rbac.authorization.kubernetes.io/autoupdate: "true"
+>   labels:
+>     kubernetes.io/bootstrapping: rbac-defaults
+>   name: system:kube-apiserver-to-kubelet
+> rules:
+>   - apiGroups:
+>       - ""
+>     resources:
+>       - nodes/proxy
+>       - nodes/stats
+>       - nodes/log
+>       - nodes/spec
+>       - nodes/metrics
+>     verbs:
+>       - "*"
+> EOF
+clusterrole.rbac.authorization.k8s.io/system:kube-apiserver-to-kubelet created
+
+efm@controller-0:~$ cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
+> apiVersion: rbac.authorization.k8s.io/v1beta1
+> kind: ClusterRoleBinding
+> metadata:
+>   name: system:kube-apiserver
+>   namespace: ""
+> roleRef:
+>   apiGroup: rbac.authorization.k8s.io
+>   kind: ClusterRole
+>   name: system:kube-apiserver-to-kubelet
+> subjects:
+>   - apiGroup: rbac.authorization.k8s.io
+>     kind: User
+>     name: kubernetes
+> EOF
+clusterrolebinding.rbac.authorization.k8s.io/system:kube-apiserver created
+```
+
+### Kubernetes Frontend Load Balancer
+
+```
+efm@controller-0:~$ {
+>   KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+>     --region $(gcloud config get-value compute/region) \
+>     --format 'value(address)')
+> 
+>   gcloud compute http-health-checks create kubernetes \
+>     --description "Kubernetes Health Check" \
+>     --host "kubernetes.default.svc.cluster.local" \
+>     --request-path "/healthz"
+> 
+>   gcloud compute firewall-rules create kubernetes-the-hard-way-allow-health-check \
+>     --network kubernetes-the-hard-way \
+>     --source-ranges 209.85.152.0/22,209.85.204.0/22,35.191.0.0/16 \
+>     --allow tcp
+> 
+>   gcloud compute target-pools create kubernetes-target-pool \
+>     --http-health-check kubernetes
+> 
+>   gcloud compute target-pools add-instances kubernetes-target-pool \
+>    --instances controller-0,controller-1,controller-2
+> 
+>   gcloud compute forwarding-rules create kubernetes-forwarding-rule \
+>     --address ${KUBERNETES_PUBLIC_ADDRESS} \
+>     --ports 6443 \
+>     --region $(gcloud config get-value compute/region) \
+>     --target-pool kubernetes-target-pool
+> }
+(unset)
+ERROR: (gcloud.compute.addresses.describe) argument --region: expected one argument
+Usage: gcloud compute addresses describe NAME [optional flags]
+  optional flags may be  --global | --help | --region
+
+For detailed information on this command and its flags, run:
+  gcloud compute addresses describe --help
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/httpHealthChecks/kubernetes].
+NAME        HOST                                  PORT  REQUEST_PATH
+kubernetes  kubernetes.default.svc.cluster.local  80    /healthz
+Creating firewall...⠹Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-health-check].     
+Creating firewall...done.                                                                                                                                    
+NAME                                        NETWORK                  DIRECTION  PRIORITY  ALLOW  DENY  DISABLED
+kubernetes-the-hard-way-allow-health-check  kubernetes-the-hard-way  INGRESS    1000      tcp          False
+Did you mean region [us-central1] for target pool: 
+[kubernetes-target-pool] (Y/n)?  y
+
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool].
+NAME                    REGION       SESSION_AFFINITY  BACKUP  HEALTH_CHECKS
+kubernetes-target-pool  us-central1  NONE                      kubernetes
+Did you mean zone [us-central1-b] for instance: [controller-0, 
+controller-1, controller-2] (Y/n)?  y
+
+Updated [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool].
+(unset)
+ERROR: (gcloud.compute.forwarding-rules.create) argument --address: expected one argument
+Usage: gcloud compute forwarding-rules create NAME (--backend-service=BACKEND_SERVICE | --target-http-proxy=TARGET_HTTP_PROXY | --target-https-proxy=TARGET_HTTPS_PROXY | --target-instance=TARGET_INSTANCE | --target-pool=TARGET_POOL | --target-ssl-proxy=TARGET_SSL_PROXY | --target-tcp-proxy=TARGET_TCP_PROXY | --target-vpn-gateway=TARGET_VPN_GATEWAY) [optional flags]
+  optional flags may be  --address | --address-region | --allow-global-access |
+                         --backend-service | --backend-service-region |
+                         --description | --global | --global-address |
+                         --global-backend-service | --global-target-http-proxy |
+                         --global-target-https-proxy | --help | --ip-protocol |
+                         --ip-version | --is-mirroring-collector |
+                         --load-balancing-scheme | --network | --network-tier |
+                         --port-range | --ports | --region | --service-label |
+                         --subnet | --subnet-region | --target-http-proxy |
+                         --target-http-proxy-region | --target-https-proxy |
+                         --target-https-proxy-region | --target-instance |
+                         --target-instance-zone | --target-pool |
+                         --target-pool-region | --target-ssl-proxy |
+                         --target-tcp-proxy | --target-vpn-gateway |
+                         --target-vpn-gateway-region
+
+For detailed information on this command and its flags, run:
+  gcloud compute forwarding-rules create --help
+
+  efm@controller-1:~$ {
+>   KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+>     --region $(gcloud config get-value compute/region) \
+>     --format 'value(address)')
+> 
+>   gcloud compute http-health-checks create kubernetes \
+>     --description "Kubernetes Health Check" \
+>     --host "kubernetes.default.svc.cluster.local" \
+>     --request-path "/healthz"
+> 
+>   gcloud compute firewall-rules create kubernetes-the-hard-way-allow-health-check \
+>     --network kubernetes-the-hard-way \
+>     --source-ranges 209.85.152.0/22,209.85.204.0/22,35.191.0.0/16 \
+>     --allow tcp
+> 
+>   gcloud compute target-pools create kubernetes-target-pool \
+>     --http-health-check kubernetes
+> 
+>   gcloud compute target-pools add-instances kubernetes-target-pool \
+>    --instances controller-0,controller-1,controller-2
+> 
+>   gcloud compute forwarding-rules create kubernetes-forwarding-rule \
+>     --address ${KUBERNETES_PUBLIC_ADDRESS} \
+>     --ports 6443 \
+>     --region $(gcloud config get-value compute/region) \
+>     --target-pool kubernetes-target-pool
+> }
+(unset)
+ERROR: (gcloud.compute.addresses.describe) argument --region: expected one argument
+Usage: gcloud compute addresses describe NAME [optional flags]
+  optional flags may be  --global | --help | --region
+
+For detailed information on this command and its flags, run:
+  gcloud compute addresses describe --help
+ERROR: (gcloud.compute.http-health-checks.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/global/httpHealthChecks/kubernetes' already exists
+
+Creating firewall...failed.                                                                                                                                  
+ERROR: (gcloud.compute.firewall-rules.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-health-check' already exists
+
+Did you mean region [us-central1] for target pool: 
+[kubernetes-target-pool] (Y/n)?  y
+
+ERROR: (gcloud.compute.target-pools.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool' already exists
+
+Did you mean zone [us-central1-b] for instance: [controller-0, 
+controller-1, controller-2] (Y/n)?  y
+
+Updated [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool].
+(unset)
+ERROR: (gcloud.compute.forwarding-rules.create) argument --address: expected one argument
+Usage: gcloud compute forwarding-rules create NAME (--backend-service=BACKEND_SERVICE | --target-http-proxy=TARGET_HTTP_PROXY | --target-https-proxy=TARGET_HTTPS_PROXY | --target-instance=TARGET_INSTANCE | --target-pool=TARGET_POOL | --target-ssl-proxy=TARGET_SSL_PROXY | --target-tcp-proxy=TARGET_TCP_PROXY | --target-vpn-gateway=TARGET_VPN_GATEWAY) [optional flags]
+  optional flags may be  --address | --address-region | --allow-global-access |
+                         --backend-service | --backend-service-region |
+                         --description | --global | --global-address |
+                         --global-backend-service | --global-target-http-proxy |
+                         --global-target-https-proxy | --help | --ip-protocol |
+                         --ip-version | --is-mirroring-collector |
+                         --load-balancing-scheme | --network | --network-tier |
+                         --port-range | --ports | --region | --service-label |
+                         --subnet | --subnet-region | --target-http-proxy |
+                         --target-http-proxy-region | --target-https-proxy |
+                         --target-https-proxy-region | --target-instance |
+                         --target-instance-zone | --target-pool |
+                         --target-pool-region | --target-ssl-proxy |
+                         --target-tcp-proxy | --target-vpn-gateway |
+                         --target-vpn-gateway-region
+
+For detailed information on this command and its flags, run:
+  gcloud compute forwarding-rules create --help
+
+efm@controller-2:~$ {
+>   KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+>     --region $(gcloud config get-value compute/region) \
+>     --format 'value(address)')
+> 
+>   gcloud compute http-health-checks create kubernetes \
+>     --description "Kubernetes Health Check" \
+>     --host "kubernetes.default.svc.cluster.local" \
+>     --request-path "/healthz"
+> 
+>   gcloud compute firewall-rules create kubernetes-the-hard-way-allow-health-check \
+>     --network kubernetes-the-hard-way \
+>     --source-ranges 209.85.152.0/22,209.85.204.0/22,35.191.0.0/16 \
+>     --allow tcp
+> 
+>   gcloud compute target-pools create kubernetes-target-pool \
+>     --http-health-check kubernetes
+> 
+>   gcloud compute target-pools add-instances kubernetes-target-pool \
+>    --instances controller-0,controller-1,controller-2
+> 
+>   gcloud compute forwarding-rules create kubernetes-forwarding-rule \
+>     --address ${KUBERNETES_PUBLIC_ADDRESS} \
+>     --ports 6443 \
+>     --region $(gcloud config get-value compute/region) \
+>     --target-pool kubernetes-target-pool
+> }
+(unset)
+ERROR: (gcloud.compute.addresses.describe) argument --region: expected one argument
+Usage: gcloud compute addresses describe NAME [optional flags]
+  optional flags may be  --global | --help | --region
+
+For detailed information on this command and its flags, run:
+  gcloud compute addresses describe --help
+ERROR: (gcloud.compute.http-health-checks.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/global/httpHealthChecks/kubernetes' already exists
+
+Creating firewall...failed.                                                                                                                                  
+ERROR: (gcloud.compute.firewall-rules.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-health-check' already exists
+
+Did you mean region [us-central1] for target pool: 
+[kubernetes-target-pool] (Y/n)?  y
+
+ERROR: (gcloud.compute.target-pools.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool' already exists
+
+Did you mean zone [us-central1-b] for instance: [controller-0, 
+controller-1, controller-2] (Y/n)?  y
+
+Updated [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool].
+(unset)
+ERROR: (gcloud.compute.forwarding-rules.create) argument --address: expected one argument
+Usage: gcloud compute forwarding-rules create NAME (--backend-service=BACKEND_SERVICE | --target-http-proxy=TARGET_HTTP_PROXY | --target-https-proxy=TARGET_HTTPS_PROXY | --target-instance=TARGET_INSTANCE | --target-pool=TARGET_POOL | --target-ssl-proxy=TARGET_SSL_PROXY | --target-tcp-proxy=TARGET_TCP_PROXY | --target-vpn-gateway=TARGET_VPN_GATEWAY) [optional flags]
+  optional flags may be  --address | --address-region | --allow-global-access |
+                         --backend-service | --backend-service-region |
+                         --description | --global | --global-address |
+                         --global-backend-service | --global-target-http-proxy |
+                         --global-target-https-proxy | --help | --ip-protocol |
+                         --ip-version | --is-mirroring-collector |
+                         --load-balancing-scheme | --network | --network-tier |
+                         --port-range | --ports | --region | --service-label |
+                         --subnet | --subnet-region | --target-http-proxy |
+                         --target-http-proxy-region | --target-https-proxy |
+                         --target-https-proxy-region | --target-instance |
+                         --target-instance-zone | --target-pool |
+                         --target-pool-region | --target-ssl-proxy |
+                         --target-tcp-proxy | --target-vpn-gateway |
+                         --target-vpn-gateway-region
+
+For detailed information on this command and its flags, run:
+  gcloud compute forwarding-rules create --help
+
+```
+
+### Verify
+
+Run this on my laptop
+
+```
+KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region) \
+  --format 'value(address)')
+
+```
+
+To fix  the region errors, in each controller I did that, which was the wrong thing
+
+```
+ gcloud  config set compute/region  'us-central1'
+```
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+>   --region $(gcloud config get-value compute/region) \
+>   --format 'value(address)')
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ curl --cacert ca.pem https://${KUBERNETES_PUBLIC_ADDRESS}:6443/version
+```
+That command timed out, and I don't know why 
+
+
 
 
 
