@@ -3706,7 +3706,119 @@ worker-2   Ready    <none>   41s     v1.15.3
 ```
 
 
+## Configuring kubectl for remote access
+
+From my laptop, which I used to create the admin certs
+
 ```
+{
+  KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+    --region $(gcloud config get-value compute/region) \
+    --format 'value(address)')
+
+  kubectl config set-cluster kubernetes-the-hard-way \
+    --certificate-authority=ca.pem \
+    --embed-certs=true \
+    --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443
+
+  kubectl config set-credentials admin \
+    --client-certificate=admin.pem \
+    --client-key=admin-key.pem
+
+  kubectl config set-context kubernetes-the-hard-way \
+    --cluster=kubernetes-the-hard-way \
+    --user=admin
+
+  kubectl config use-context kubernetes-the-hard-way
+}
+```
+
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ {
+>   KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+>     --region $(gcloud config get-value compute/region) \
+>     --format 'value(address)')
+> 
+>   kubectl config set-cluster kubernetes-the-hard-way \
+>     --certificate-authority=ca.pem \
+>     --embed-certs=true \
+>     --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443
+> 
+>   kubectl config set-credentials admin \
+>     --client-certificate=admin.pem \
+>     --client-key=admin-key.pem
+> 
+>   kubectl config set-context kubernetes-the-hard-way \
+>     --cluster=kubernetes-the-hard-way \
+>     --user=admin
+> 
+>   kubectl config use-context kubernetes-the-hard-way
+> }
+Cluster "kubernetes-the-hard-way" set.
+User "admin" set.
+Context "kubernetes-the-hard-way" created.
+Switched to context "kubernetes-the-hard-way".
+```
+
+```
+kubectl get componentstatuses
+NAME                 AGE
+controller-manager   <unknown>
+scheduler            <unknown>
+etcd-0               <unknown>
+etcd-2               <unknown>
+etcd-1               <unknown>
+```
+
+```
+kubectl get nodes
+```
+
+## Provisioning Pod Network Routes
+
+On my laptop
+
+```
+for instance in worker-0 worker-1 worker-2; do
+  gcloud compute instances describe ${instance} \
+    --format 'value[separator=" "](networkInterfaces[0].networkIP,metadata.items[0].value)'
+done
+```
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ for i in 0 1 2; do
+>   gcloud compute routes create kubernetes-route-10-200-${i}-0-24 \
+>     --network kubernetes-the-hard-way \
+>     --next-hop-address 10.240.0.2${i} \
+>     --destination-range 10.200.${i}.0/24
+> done
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/routes/kubernetes-route-10-200-0-0-24].
+NAME                            NETWORK                  DEST_RANGE     NEXT_HOP     PRIORITY
+kubernetes-route-10-200-0-0-24  kubernetes-the-hard-way  10.200.0.0/24  10.240.0.20  1000
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/routes/kubernetes-route-10-200-1-0-24].
+NAME                            NETWORK                  DEST_RANGE     NEXT_HOP     PRIORITY
+kubernetes-route-10-200-1-0-24  kubernetes-the-hard-way  10.200.1.0/24  10.240.0.21  1000
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/routes/kubernetes-route-10-200-2-0-24].
+NAME                            NETWORK                  DEST_RANGE     NEXT_HOP     PRIORITY
+kubernetes-route-10-200-2-0-24  kubernetes-the-hard-way  10.200.2.0/24  10.240.0.22  1000
+```
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ gcloud compute routes list --filter "network: kubernetes-the-hard-way"
+NAME                            NETWORK                  DEST_RANGE     NEXT_HOP                  PRIORITY
+default-route-0729d983e716a456  kubernetes-the-hard-way  0.0.0.0/0      default-internet-gateway  1000
+default-route-ff5e9b7a81dfd708  kubernetes-the-hard-way  10.240.0.0/24  kubernetes-the-hard-way   0
+kubernetes-route-10-200-0-0-24  kubernetes-the-hard-way  10.200.0.0/24  10.240.0.20               1000
+kubernetes-route-10-200-1-0-24  kubernetes-the-hard-way  10.200.1.0/24  10.240.0.21               1000
+kubernetes-route-10-200-2-0-24  kubernetes-the-hard-way  10.200.2.0/24  10.240.0.22               1000
+```
+
+
+
+
+```
+
 
 
 
