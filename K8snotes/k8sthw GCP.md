@@ -3850,6 +3850,108 @@ Address 1: 10.32.0.1 kubernetes.default.svc.cluster.local
 
 ```
 
+# Verify the whole k8s
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl create secret generic kubernetes-the-hard-way \
+>   --from-literal="mykey=mydata"
+secret/kubernetes-the-hard-way created
+
+gcloud compute ssh controller-0 \
+  --command "sudo ETCDCTL_API=3 etcdctl get \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/etcd/ca.pem \
+  --cert=/etc/etcd/kubernetes.pem \
+  --key=/etc/etcd/kubernetes-key.pem\
+  /registry/secrets/default/kubernetes-the-hard-way | hexdump -C"
+
+  efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ gcloud compute ssh controller-0 \
+>   --command "sudo ETCDCTL_API=3 etcdctl get \
+>   --endpoints=https://127.0.0.1:2379 \
+>   --cacert=/etc/etcd/ca.pem \
+>   --cert=/etc/etcd/kubernetes.pem \
+>   --key=/etc/etcd/kubernetes-key.pem\
+>   /registry/secrets/default/kubernetes-the-hard-way | hexdump -C"
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+00000000  2f 72 65 67 69 73 74 72  79 2f 73 65 63 72 65 74  |/registry/secret|
+00000010  73 2f 64 65 66 61 75 6c  74 2f 6b 75 62 65 72 6e  |s/default/kubern|
+00000020  65 74 65 73 2d 74 68 65  2d 68 61 72 64 2d 77 61  |etes-the-hard-wa|
+00000030  79 0a 6b 38 73 3a 65 6e  63 3a 61 65 73 63 62 63  |y.k8s:enc:aescbc|
+00000040  3a 76 31 3a 6b 65 79 31  3a 8a 8a ea d4 1e ad 13  |:v1:key1:.......|
+00000050  d4 78 47 53 9d 12 56 56  5f 1c 1f 34 4d 58 a9 b6  |.xGS..VV_..4MX..|
+00000060  ea d3 18 bf 6c ca 67 89  64 10 09 ea be db 52 0d  |....l.g.d.....R.|
+00000080  b6 76 6f e9 64 a2 f2 1f  ae 84 2e 2b 41 7e b6 99  |.vo.d......+A~..|
+00000090  f9 6a 5d 12 d9 2f 52 4d  3a f3 b0 5c 6f 80 4e 5a  |.j]../RM:..\o.NZ|
+000000a0  d3 57 d4 43 be f5 32 9e  d4 d7 82 49 2e 95 96 f4  |.W.C..2....I....|
+000000b0  a8 21 81 c0 5c 87 e7 73  01 d3 25 58 b6 ac 85 68  |.!..\..s..%X...h|
+000000c0  de b9 8c b3 82 be 59 07  1d fe 1b ea 0f ca b8 dc  |......Y.........|
+000000d0  44 bd d1 f5 f7 7d 7a 51  7e c7 dc 4f 2a 35 44 56  |D....}zQ~..O*5DV|
+000000e0  9a 42 e0 df 43 19 32 dd  1a 0a                    |.B..C.2...|
+000000ea
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl create deployment nginx --image=nginx
+deployment.apps/nginx created
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl get pods -l app=nginx
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-554b9c67f9-p9s2s   1/1     Running   0          30s
+
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ POD_NAME=$(kubectl get pods -l app=nginx -o jsonpath="{.items[0].metadata.name}")
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl port-forward $POD_NAME 8080:80
+Forwarding from 127.0.0.1:8080 -> 80
+Forwarding from [::1]:8080 -> 80
+Handling connection for 8080
+--
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ curl --head http://127.0.0.1:8080
+HTTP/1.1 200 OK
+Server: nginx/1.19.0
+Date: Sat, 27 Jun 2020 20:16:23 GMT
+Content-Type: text/html
+Content-Length: 612
+Last-Modified: Tue, 26 May 2020 15:00:20 GMT
+Connection: keep-alive
+ETag: "5ecd2f04-264"
+Accept-Ranges: bytes
+--
+```
+
+```
+efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl logs $POD_NAME
+/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+10-listen-on-ipv6-by-default.sh: Getting the checksum of /etc/nginx/conf.d/default.conf
+10-listen-on-ipv6-by-default.sh: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+/docker-entrypoint.sh: Configuration complete; ready for start up
+127.0.0.1 - - [27/Jun/2020:20:16:23 +0000] "HEAD / HTTP/1.1" 200 0 "-" "curl/7.58.0" "-"
+
+kubectl exec -ti $POD_NAME -- nginx -v
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl exec -ti $POD_NAME -- nginx -v
+nginx version: nginx/1.19.0
+
+kubectl expose deployment nginx --port 80 --type NodePort
+
+NODE_PORT=$(kubectl get svc nginx \
+  --output=jsonpath='{range .spec.ports[0]}{.nodePort}')
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ gcloud compute firewall-rules create kubernetes-the-hard-way-allow-nginx-service \
+>   --allow=tcp:${NODE_PORT} \
+>   --network kubernetes-the-hard-way
+Creating firewall...⠹Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-nginx-service].    
+Creating firewall...done.                                                                                                                                    
+NAME                                         NETWORK                  DIRECTION  PRIORITY  ALLOW      DENY  DISABLED
+kubernetes-the-hard-way-allow-nginx-service  kubernetes-the-hard-way  INGRESS    1000      tcp:30943        False
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ EXTERNAL_IP=$(gcloud compute instances describe worker-0 \
+>   --format 'value(networkInterfaces[0].accessConfigs[0].natIP)')
+
+curl -I http://${EXTERNAL_IP}:${NODE_PORT}
+```
+
+
+
 
 
 
