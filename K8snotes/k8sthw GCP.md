@@ -517,7 +517,19 @@ done
 2020/06/27 09:52:18 [INFO] encoded CSR
 2020/06/27 09:52:18 [INFO] signed certificate with serial number 56738396642278894067004804745041309224421289106
 
+ls 
+admin.csr       admin.pem       ca-csr.json  CONTRIBUTING.md  docs       worker-0.csr       worker-0.pem       worker-1-key.pem  worker-2-csr.json
+admin-csr.json  ca-config.json  ca-key.pem   COPYRIGHT.md     LICENSE    worker-0-csr.json  worker-1.csr       worker-1.pem      worker-2-key.pem
+admin-key.pem   ca.csr          ca.pem       deployments      README.md  worker-0-key.pem   worker-1-csr.json  worker-2.csr      worker-2.pem
+
 ```
+
+
+### Controller manager certificate
+
+```
+
+
 
 
 
