@@ -289,6 +289,21 @@ Instance creation in progress for [worker-2]: https://www.googleapis.com/compute
 Use [gcloud compute operations describe URI] command to check the status of the operation(s).
 ```
 
+### Verify instances
+
+```
+gcloud compute instances list
+
+NAME          ZONE           MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP      STATUS
+controller-0  us-central1-b  n1-standard-1               10.240.0.10  35.226.68.16     RUNNING
+controller-1  us-central1-b  n1-standard-1               10.240.0.11  130.211.222.139  RUNNING
+controller-2  us-central1-b  n1-standard-1               10.240.0.12  35.223.99.40     RUNNING
+worker-0      us-central1-b  n1-standard-1               10.240.0.20  34.70.114.213    RUNNING
+worker-1      us-central1-b  n1-standard-1               10.240.0.21  35.226.118.223   RUNNING
+worker-2      us-central1-b  n1-standard-1               10.240.0.22  35.232.160.221   RUNNING
+```
+
+
 
 
 
