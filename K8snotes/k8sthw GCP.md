@@ -457,7 +457,15 @@ websites. For more information see the Baseline Requirements for the Issuance an
 of Publicly-Trusted Certificates, v.1.1.6, from the CA/Browser Forum (https://cabforum.org);
 specifically, section 10.2.3 ("Information Requirements").
 
+ls 
+admin.csr       admin-key.pem  ca-config.json  ca-csr.json  ca.pem           COPYRIGHT.md  docs     README.md
+admin-csr.json  admin.pem      ca.csr          ca-key.pem   CONTRIBUTING.md  deployments   LICENSE
+
 ```
+
+
+
+
 
 
 
