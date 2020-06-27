@@ -92,6 +92,62 @@ I didn't do
 gcloud config set compute/region us-west1
 because I had already set the region.
 
+## Install the rest of the client tools
+
+```
+wget -q --show-progress --https-only --timestamping \
+  https://storage.googleapis.com/kubernetes-the-hard-way/cfssl/linux/cfssl \
+  https://storage.googleapis.com/kubernetes-the-hard-way/cfssl/linux/cfssljson
+
+wget -q --show-progress --https-only --timestamping \
+>   https://storage.googleapis.com/kubernetes-the-hard-way/cfssl/linux/cfssl \
+>   https://storage.googleapis.com/kubernetes-the-hard-way/cfssl/linux/cfssljson
+cfssl                                   100%[=============================================================================>]  19.62M  4.79MB/s    in 4.1s    
+cfssljson                               100%[=============================================================================>]  12.08M  2.68MB/s    in 4.5s    
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ chmod +x cfssl cfssljson
+
+```
+
+I hope this doesn't break anything
+
+```
+sudo mv cfssl cfssljson /usr/local/bin/
+```
+
+```
+cfssl version
+Version: 1.3.4
+Revision: dev
+Runtime: go1.13
+
+cfssljson --version
+Version: 1.3.4
+Revision: dev
+Runtime: go1.13
+
+```
+
+I'm going  to use a snap for kubectl
+
+```
+kubectl
+
+Command 'kubectl' not found, but can be installed with:
+
+sudo snap install kubectl
+
+```
+sudo snap install kubectl --classic
+kubectl 1.18.4 from Canonical✓ installed
+
+kubectl version --client
+Client Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.4", GitCommit:"c96aede7b5205121079932896c4ad89bb93260af", GitTreeState:"clean", BuildDate:"2020-06-18T17:02:08Z", GoVersion:"go1.13.12", Compiler:"gc", Platform:"linux/amd64"}
+
+```
+
+
+
+
 
 
 
