@@ -2986,7 +2986,19 @@ efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ KUBERNETES
 >   --format 'value(address)')
 efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ curl --cacert ca.pem https://${KUBERNETES_PUBLIC_ADDRESS}:6443/version
 ```
-That command timed out, and I don't know why 
+That command timed out, and I don't know why. My guess is that my gcloud init connection timed out after 3 hours.
+
+Took lunch, came benchmark.md
+
+```
+gcloud init
+```
+
+To login, set the project and the compute region.
+
+
+
+
 
 
 
