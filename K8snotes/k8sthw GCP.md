@@ -528,6 +528,271 @@ admin-key.pem   ca.csr          ca.pem       deployments      README.md  worker-
 ### Controller manager certificate
 
 ```
+{
+
+cat > kube-controller-manager-csr.json <<EOF
+{
+  "CN": "system:kube-controller-manager",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-controller-manager",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
+
+}
+
+2020/06/27 09:54:46 [INFO] generate received request
+2020/06/27 09:54:46 [INFO] received CSR
+2020/06/27 09:54:46 [INFO] generating key: rsa-2048
+2020/06/27 09:54:46 [INFO] encoded CSR
+2020/06/27 09:54:46 [INFO] signed certificate with serial number 154346400804599157115195901801002368810160151040
+2020/06/27 09:54:46 [WARNING] This certificate lacks a "hosts" field. This makes it unsuitable for
+websites. For more information see the Baseline Requirements for the Issuance and Management
+of Publicly-Trusted Certificates, v.1.1.6, from the CA/Browser Forum (https://cabforum.org);
+specifically, section 10.2.3 ("Information Requirements").
+
+ls 
+admin.csr       ca.csr           COPYRIGHT.md                      kube-controller-manager-key.pem  worker-0-csr.json  worker-1-key.pem   worker-2.pem
+admin-csr.json  ca-csr.json      deployments                       kube-controller-manager.pem      worker-0-key.pem   worker-1.pem
+admin-key.pem   ca-key.pem       docs                              LICENSE                          worker-0.pem       worker-2.csr
+admin.pem       ca.pem           kube-controller-manager.csr       README.md                        worker-1.csr       worker-2-csr.json
+ca-config.json  CONTRIBUTING.md  kube-controller-manager-csr.json  worker-0.csr                     worker-1-csr.json  worker-2-key.pem
+```
+
+### Kube Proxy Client Certificate
+
+```
+{
+
+cat > kube-proxy-csr.json <<EOF
+{
+  "CN": "system:kube-proxy",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:node-proxier",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kube-proxy-csr.json | cfssljson -bare kube-proxy
+
+}
+
+2020/06/27 09:57:24 [INFO] generate received request
+2020/06/27 09:57:24 [INFO] received CSR
+2020/06/27 09:57:24 [INFO] generating key: rsa-2048
+2020/06/27 09:57:24 [INFO] encoded CSR
+2020/06/27 09:57:24 [INFO] signed certificate with serial number 279407610448290674768414334222698037901375872992
+2020/06/27 09:57:24 [WARNING] This certificate lacks a "hosts" field. This makes it unsuitable for
+websites. For more information see the Baseline Requirements for the Issuance and Management
+of Publicly-Trusted Certificates, v.1.1.6, from the CA/Browser Forum (https://cabforum.org);
+specifically, section 10.2.3 ("Information Requirements").
+
+ls 
+admin.csr       ca.csr           COPYRIGHT.md                      kube-controller-manager-key.pem  kube-proxy.pem     worker-0-key.pem   worker-1.pem
+admin-csr.json  ca-csr.json      deployments                       kube-controller-manager.pem      LICENSE            worker-0.pem       worker-2.csr
+admin-key.pem   ca-key.pem       docs                              kube-proxy.csr                   README.md          worker-1.csr       worker-2-csr.json
+admin.pem       ca.pem           kube-controller-manager.csr       kube-proxy-csr.json              worker-0.csr       worker-1-csr.json  worker-2-key.pem
+ca-config.json  CONTRIBUTING.md  kube-controller-manager-csr.json  kube-proxy-key.pem               worker-0-csr.json  worker-1-key.pem   worker-2.pem
+``` 
+
+### Scheduler Client Certificate
+
+```
+{
+
+cat > kube-scheduler-csr.json <<EOF
+{
+  "CN": "system:kube-scheduler",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-scheduler",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kube-scheduler-csr.json | cfssljson -bare kube-scheduler
+
+}
+
+2020/06/27 09:59:31 [INFO] generate received request
+2020/06/27 09:59:31 [INFO] received CSR
+2020/06/27 09:59:31 [INFO] generating key: rsa-2048
+2020/06/27 09:59:31 [INFO] encoded CSR
+2020/06/27 09:59:31 [INFO] signed certificate with serial number 58030601383547395617318372447276734782671195971
+2020/06/27 09:59:31 [WARNING] This certificate lacks a "hosts" field. This makes it unsuitable for
+websites. For more information see the Baseline Requirements for the Issuance and Management
+of Publicly-Trusted Certificates, v.1.1.6, from the CA/Browser Forum (https://cabforum.org);
+specifically, section 10.2.3 ("Information Requirements").
+
+
+ls 
+admin.csr       ca-csr.json      docs                              kube-proxy-csr.json      kube-scheduler.pem  worker-0.pem       worker-2-csr.json
+admin-csr.json  ca-key.pem       kube-controller-manager.csr       kube-proxy-key.pem       LICENSE             worker-1.csr       worker-2-key.pem
+admin-key.pem   ca.pem           kube-controller-manager-csr.json  kube-proxy.pem           README.md           worker-1-csr.json  worker-2.pem
+admin.pem       CONTRIBUTING.md  kube-controller-manager-key.pem   kube-scheduler.csr       worker-0.csr        worker-1-key.pem
+ca-config.json  COPYRIGHT.md     kube-controller-manager.pem       kube-scheduler-csr.json  worker-0-csr.json   worker-1.pem
+ca.csr          deployments      kube-proxy.csr                    kube-scheduler-key.pem   worker-0-key.pem    worker-2.csr
+
+```
+
+### Kubernetes Server API certificate
+
+```
+{
+
+KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region) \
+  --format 'value(address)')
+
+KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+
+cat > kubernetes-csr.json <<EOF
+{
+  "CN": "kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -profile=kubernetes \
+  kubernetes-csr.json | cfssljson -bare kubernetes
+
+}
+
+2020/06/27 10:01:06 [INFO] generate received request
+2020/06/27 10:01:06 [INFO] received CSR
+2020/06/27 10:01:06 [INFO] generating key: rsa-2048
+2020/06/27 10:01:06 [INFO] encoded CSR
+2020/06/27 10:01:06 [INFO] signed certificate with serial number 411201534192533111284304824528746495470220956073
+
+ls 
+admin.csr       ca-key.pem                   kube-controller-manager-csr.json  kubernetes.csr           kube-scheduler.pem  worker-1.csr       worker-2.pem
+admin-csr.json  ca.pem                       kube-controller-manager-key.pem   kubernetes-csr.json      LICENSE             worker-1-csr.json
+admin-key.pem   CONTRIBUTING.md              kube-controller-manager.pem       kubernetes-key.pem       README.md           worker-1-key.pem
+admin.pem       COPYRIGHT.md                 kube-proxy.csr                    kubernetes.pem           worker-0.csr        worker-1.pem
+ca-config.json  deployments                  kube-proxy-csr.json               kube-scheduler.csr       worker-0-csr.json   worker-2.csr
+ca.csr          docs                         kube-proxy-key.pem                kube-scheduler-csr.json  worker-0-key.pem    worker-2-csr.json
+ca-csr.json     kube-controller-manager.csr  kube-proxy.pem                    kube-scheduler-key.pem   worker-0.pem        worker-2-key.pem
+```
+
+### Service account keypair
+
+```
+{
+
+cat > service-account-csr.json <<EOF
+{
+  "CN": "service-accounts",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  service-account-csr.json | cfssljson -bare service-account
+
+}
+
+2020/06/27 10:02:49 [INFO] generate received request
+2020/06/27 10:02:49 [INFO] received CSR
+2020/06/27 10:02:49 [INFO] generating key: rsa-2048
+2020/06/27 10:02:49 [INFO] encoded CSR
+2020/06/27 10:02:49 [INFO] signed certificate with serial number 383432656597844388981569592219872688003981747416
+2020/06/27 10:02:49 [WARNING] This certificate lacks a "hosts" field. This makes it unsuitable for
+websites. For more information see the Baseline Requirements for the Issuance and Management
+of Publicly-Trusted Certificates, v.1.1.6, from the CA/Browser Forum (https://cabforum.org);
+specifically, section 10.2.3 ("Information Requirements").
+
+ls 
+admin.csr       ca.pem                            kube-controller-manager.pem  kubernetes.pem           service-account-csr.json  worker-1-csr.json
+admin-csr.json  CONTRIBUTING.md                   kube-proxy.csr               kube-scheduler.csr       service-account-key.pem   worker-1-key.pem
+admin-key.pem   COPYRIGHT.md                      kube-proxy-csr.json          kube-scheduler-csr.json  service-account.pem       worker-1.pem
+admin.pem       deployments                       kube-proxy-key.pem           kube-scheduler-key.pem   worker-0.csr              worker-2.csr
+ca-config.json  docs                              kube-proxy.pem               kube-scheduler.pem       worker-0-csr.json         worker-2-csr.json
+ca.csr          kube-controller-manager.csr       kubernetes.csr               LICENSE                  worker-0-key.pem          worker-2-key.pem
+ca-csr.json     kube-controller-manager-csr.json  kubernetes-csr.json          README.md                worker-0.pem              worker-2.pem
+ca-key.pem      kube-controller-manager-key.pem   kubernetes-key.pem           service-account.csr      worker-1.csr
+
+``` 
+
+
 
 
 
