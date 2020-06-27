@@ -337,6 +337,129 @@ efm@controller-0:~$
 
 ### I'm In
 
+```
+exit
+logout
+Connection to 35.226.68.16 closed.
+```
+
+
+### Provisioning CA
+
+"In this lab you will provision a PKI Infrastructure using CloudFlare's PKI toolkit, cfssl, then use it to bootstrap a Certificate Authority, and generate TLS certificates for the following components: etcd, kube-apiserver, kube-controller-manager, kube-scheduler, kubelet, and kube-proxy."
+
+
+Note that the { } here are a grouping in bash, not json.
+
+```
+{
+
+cat > ca-config.json <<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "8760h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": ["signing", "key encipherment", "server auth", "client auth"],
+        "expiry": "8760h"
+      }
+    }
+  }
+}
+EOF
+
+cat > ca-csr.json <<EOF
+{
+  "CN": "Kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "CA",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+
+}
+```
+
+Yup it worked
+
+```
+2020/06/27 09:45:41 [INFO] generating a new CA key and certificate from CSR
+2020/06/27 09:45:41 [INFO] generate received request
+2020/06/27 09:45:41 [INFO] received CSR
+2020/06/27 09:45:41 [INFO] generating key: rsa-2048
+2020/06/27 09:45:41 [INFO] encoded CSR
+2020/06/27 09:45:41 [INFO] signed certificate with serial number 721286613313691851076167236053048368045875461963
+
+```
+
+Check for the files
+
+```
+ls 
+ls
+ca-config.json  ca.csr  ca-csr.json  ca-key.pem  ca.pem  CONTRIBUTING.md  COPYRIGHT.md  deployments  docs  LICENSE  README.md
+```
+
+Generate admin certs  
+
+```
+{
+
+cat > admin-csr.json <<EOF
+{
+  "CN": "admin",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:masters",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  admin-csr.json | cfssljson -bare admin
+
+}
+
+2020/06/27 09:48:15 [INFO] generate received request
+2020/06/27 09:48:15 [INFO] received CSR
+2020/06/27 09:48:15 [INFO] generating key: rsa-2048
+2020/06/27 09:48:15 [INFO] encoded CSR
+2020/06/27 09:48:15 [INFO] signed certificate with serial number 261229676193254128938752896688081251499488258633
+2020/06/27 09:48:15 [WARNING] This certificate lacks a "hosts" field. This makes it unsuitable for
+websites. For more information see the Baseline Requirements for the Issuance and Management
+of Publicly-Trusted Certificates, v.1.1.6, from the CA/Browser Forum (https://cabforum.org);
+specifically, section 10.2.3 ("Information Requirements").
+
+```
+
+
 
 
 
