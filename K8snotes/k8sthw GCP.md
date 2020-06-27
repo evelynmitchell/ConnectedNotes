@@ -3951,6 +3951,75 @@ curl -I http://${EXTERNAL_IP}:${NODE_PORT}
 ```
 
 
+## Tidy up
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ gcloud -q compute instances delete \
+>   controller-0 controller-1 controller-2 \
+>   worker-0 worker-1 worker-2 \
+>   --zone $(gcloud config get-value compute/zone)
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/instances/controller-0].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/instances/controller-1].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/instances/controller-2].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/instances/worker-0].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/instances/worker-1].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/instances/worker-2].
+
+{
+  gcloud -q compute forwarding-rules delete kubernetes-forwarding-rule \
+    --region $(gcloud config get-value compute/region)
+
+  gcloud -q compute target-pools delete kubernetes-target-pool
+
+  gcloud -q compute http-health-checks delete kubernetes
+
+  gcloud -q compute addresses delete kubernetes-the-hard-way
+}
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ {
+>   gcloud -q compute forwarding-rules delete kubernetes-forwarding-rule \
+>     --region $(gcloud config get-value compute/region)
+> 
+>   gcloud -q compute target-pools delete kubernetes-target-pool
+> 
+>   gcloud -q compute http-health-checks delete kubernetes
+> 
+>   gcloud -q compute addresses delete kubernetes-the-hard-way
+> }
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/forwardingRules/kubernetes-forwarding-rule].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/httpHealthChecks/kubernetes].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/addresses/kubernetes-the-hard-way].
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ gcloud -q compute firewall-rules delete \
+>   kubernetes-the-hard-way-allow-nginx-service \
+>   kubernetes-the-hard-way-allow-internal \
+>   kubernetes-the-hard-way-allow-external \
+>   kubernetes-the-hard-way-allow-health-check
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-nginx-service].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-internal].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-external].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-health-check].
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ {
+>   gcloud -q compute routes delete \
+>     kubernetes-route-10-200-0-0-24 \
+>     kubernetes-route-10-200-1-0-24 \
+>     kubernetes-route-10-200-2-0-24
+> 
+>   gcloud -q compute networks subnets delete kubernetes
+> 
+>   gcloud -q compute networks delete kubernetes-the-hard-way
+> }
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/routes/kubernetes-route-10-200-0-0-24].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/routes/kubernetes-route-10-200-1-0-24].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/routes/kubernetes-route-10-200-2-0-24].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
+Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
+```
+
+
+
+
 
 
 
