@@ -3137,6 +3137,580 @@ curl --cacert ca.pem https://${KUBERNETES_PUBLIC_ADDRESS}:6443/version
   "platform": "linux/amd64"
 ```
 
+##  Bootstrapping the worker nodes
+
+In this lab you will bootstrap three Kubernetes worker nodes. The following components will be installed on each node: runc, container networking plugins, containerd, kubelet, and kube-proxy.
+
+Run on all three controllers-{0,1,2} separately
+
+### Provision a worker node
+
+```
+efm@controller-0:~$ {
+>   sudo apt-get update
+>   sudo apt-get -y install socat conntrack ipset
+> }
+Hit:1 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic InRelease
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates InRelease [88.7 kB]  
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-backports InRelease [74.6 kB]
+Get:4 http://security.ubuntu.com/ubuntu bionic-security InRelease [88.7 kB]                                          
+Hit:5 http://archive.canonical.com/ubuntu bionic InRelease                                                           
+Fetched 252 kB in 0s (545 kB/s)                                                     
+Reading package lists... Done
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following packages were automatically installed and are no longer required:
+  grub-pc-bin libnuma1
+Use 'sudo apt autoremove' to remove them.
+The following additional packages will be installed:
+  libipset3
+The following NEW packages will be installed:
+  conntrack ipset libipset3 socat
+0 upgraded, 4 newly installed, 0 to remove and 0 not upgraded.
+Need to get 450 kB of archives.
+After this operation, 1560 kB of additional disk space will be used.
+Get:1 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 conntrack amd64 1:1.4.4+snapshot20161117-6ubuntu2 [30.6 kB]
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 libipset3 amd64 6.34-1 [43.9 kB]
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 ipset amd64 6.34-1 [33.7 kB]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic/main amd64 socat amd64 1.7.3.2-2ubuntu2 [342 kB]
+Fetched 450 kB in 0s (19.4 MB/s)
+Selecting previously unselected package conntrack.
+(Reading database ... 65672 files and directories currently installed.)
+Preparing to unpack .../conntrack_1%3a1.4.4+snapshot20161117-6ubuntu2_amd64.deb ...
+Unpacking conntrack (1:1.4.4+snapshot20161117-6ubuntu2) ...
+Selecting previously unselected package libipset3:amd64.
+Preparing to unpack .../libipset3_6.34-1_amd64.deb ...
+Unpacking libipset3:amd64 (6.34-1) ...
+Selecting previously unselected package ipset.
+Preparing to unpack .../ipset_6.34-1_amd64.deb ...
+Unpacking ipset (6.34-1) ...
+Selecting previously unselected package socat.
+Preparing to unpack .../socat_1.7.3.2-2ubuntu2_amd64.deb ...
+Unpacking socat (1.7.3.2-2ubuntu2) ...
+Setting up conntrack (1:1.4.4+snapshot20161117-6ubuntu2) ...
+Setting up socat (1.7.3.2-2ubuntu2) ...
+Setting up libipset3:amd64 (6.34-1) ...
+Setting up ipset (6.34-1) ...
+Processing triggers for libc-bin (2.27-3ubuntu1) ...
+Processing triggers for man-db (2.8.3-2ubuntu0.1) ...
+```
+
+### Disable Swap
+
+```
+sudo swapon --show
+```
+
+Install the software
+
+```
+efm@controller-0:~$ wget -q --show-progress --https-only --timestamping \
+>   https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.15.0/crictl-v1.15.0-linux-amd64.tar.gz \
+>   https://github.com/opencontainers/runc/releases/download/v1.0.0-rc8/runc.amd64 \
+>   https://github.com/containernetworking/plugins/releases/download/v0.8.2/cni-plugins-linux-amd64-v0.8.2.tgz \
+>   https://github.com/containerd/containerd/releases/download/v1.2.9/containerd-1.2.9.linux-amd64.tar.gz \
+>   https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl \
+>   https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kube-proxy \
+>   https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubelet
+crictl-v1.15.0-linux-amd64.tar.gz       100%[=============================================================================>]  11.50M  38.4MB/s    in 0.3s    
+runc.amd64                              100%[=============================================================================>]   9.79M  33.9MB/s    in 0.3s    
+cni-plugins-linux-amd64-v0.8.2.tgz      100%[=============================================================================>]  34.96M  65.4MB/s    in 0.5s    
+containerd-1.2.9.linux-amd64.tar.gz     100%[=============================================================================>]  32.96M  62.5MB/s    in 0.5s    
+kubectl                                 100%[=============================================================================>]  40.99M   132MB/s    in 0.3s    
+kube-proxy                              100%[=============================================================================>]  35.27M   103MB/s    in 0.3s    
+kubelet                                 100%[=============================================================================>] 114.10M   112MB/s    in 1.0s    
+```
+
+```
+efm@controller-0:~$ sudo mkdir -p \
+>   /etc/cni/net.d \
+>   /opt/cni/bin \
+>   /var/lib/kubelet \
+>   /var/lib/kube-proxy \
+>   /var/lib/kubernetes \
+>   /var/run/kubernetes
+```
+
+```
+efm@controller-0:~$ {
+>   mkdir containerd
+>   tar -xvf crictl-v1.15.0-linux-amd64.tar.gz
+>   tar -xvf containerd-1.2.9.linux-amd64.tar.gz -C containerd
+>   sudo tar -xvf cni-plugins-linux-amd64-v0.8.2.tgz -C /opt/cni/bin/
+>   sudo mv runc.amd64 runc
+>   chmod +x crictl kubectl kube-proxy kubelet runc 
+>   sudo mv crictl kubectl kube-proxy kubelet runc /usr/local/bin/
+>   sudo mv containerd/bin/* /bin/
+> }
+crictl
+bin/
+bin/containerd-shim-runc-v1
+bin/ctr
+bin/containerd
+bin/containerd-stress
+bin/containerd-shim
+./
+./flannel
+./ptp
+./host-local
+./firewall
+./portmap
+./tuning
+./vlan
+./host-device
+./bandwidth
+./sbr
+./static
+./dhcp
+./ipvlan
+./macvlan
+./loopback
+./bridge
+```
+
+### Configure CNI networking
+
+```
+POD_CIDR=$(curl -s -H "Metadata-Flavor: Google" \
+  http://metadata.google.internal/computeMetadata/v1/instance/attributes/pod-cidr)
+```
+
+```
+efm@controller-0:~$ cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
+> {
+>     "cniVersion": "0.3.1",
+>     "name": "bridge",
+>     "type": "bridge",
+>     "bridge": "cnio0",
+>     "isGateway": true,
+>     "ipMasq": true,
+>     "ipam": {
+>         "type": "host-local",
+>         "ranges": [
+>           [{"subnet": "${POD_CIDR}"}]
+>         ],
+>         "routes": [{"dst": "0.0.0.0/0"}]
+>     }
+> }
+> EOF
+{
+    "cniVersion": "0.3.1",
+    "name": "bridge",
+    "type": "bridge",
+    "bridge": "cnio0",
+    "isGateway": true,
+    "ipMasq": true,
+    "ipam": {
+        "type": "host-local",
+        "ranges": [
+          [{"subnet": "<!DOCTYPE html>
+<html lang=en>
+  <meta charset=utf-8>
+  <meta name=viewport content="initial-scale=1, minimum-scale=1, width=device-width">
+  <title>Error 404 (Not Found)!!1</title>
+  <style>
+    *{margin:0;padding:0}html,code{font:15px/22px arial,sans-serif}html{background:#fff;color:#222;padding:15px}body{margin:7% auto 0;max-width:390px;min-height:180px;padding:30px 0 15px}* > body{background:url(//www.google.com/images/errors/robot.png) 100% 5px no-repeat;padding-right:205px}p{margin:11px 0 22px;overflow:hidden}ins{color:#777;text-decoration:none}a img{border:0}@media screen and (max-width:772px){body{background:none;margin-top:0;max-width:none;padding-right:0}}#logo{background:url(//www.google.com/images/branding/googlelogo/1x/googlelogo_color_150x54dp.png) no-repeat;margin-left:-5px}@media only screen and (min-resolution:192dpi){#logo{background:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) no-repeat 0% 0%/100% 100%;-moz-border-image:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) 0}}@media only screen and (-webkit-min-device-pixel-ratio:2){#logo{background:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) no-repeat;-webkit-background-size:100% 100%}}#logo{display:inline-block;height:54px;width:150px}
+  </style>
+  <a href=//www.google.com/><span id=logo aria-label=Google></span></a>
+  <p><b>404.</b> <ins>That’s an error.</ins>
+  <p>The requested URL <code>/computeMetadata/v1/instance/attributes/pod-cidr</code> was not found on this server.  <ins>That’s all we know.</ins>"}]
+        ],
+        "routes": [{"dst": "0.0.0.0/0"}]
+    }
+}
+```
+
+My error was not switching to the worker nodes.
+
+```
+efm@worker-0:~$ {
+>   sudo apt-get update
+>   sudo apt-get -y install socat conntrack ipset
+> }
+Hit:1 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic InRelease
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates InRelease [88.7 kB]                   
+...
+```
+
+efm@worker-0:~$ wget -q --show-progress --https-only --timestamping \
+>   https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.15.0/crictl-v1.15.0-linux-amd64.tar.gz \
+>   https://github.com/opencontainers/runc/releases/download/v1.0.0-rc8/runc.amd64 \
+>   https://github.com/containernetworking/plugins/releases/download/v0.8.2/cni-plugins-linux-amd64-v0.8.2.tgz \
+>   https://github.com/containerd/containerd/releases/download/v1.2.9/containerd-1.2.9.linux-amd64.tar.gz \
+>   https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl \
+>   https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kube-proxy \
+>   https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubelet
+crictl-v1.15.0-linux-amd64.tar.gz       100%[=============================================================================>]  11.50M  37.7MB/s    in 0.3s    
+runc.amd64                              100%[=============================================================================>]   9.79M  35.2MB/s    in 0.3s    
+cni-plugins-linux-amd64-v0.8.2.tgz      100%[=============================================================================>]  34.96M  65.2MB/s    in 0.5s    
+containerd-1.2.9.linux-amd64.tar.gz     100%[=============================================================================>]  32.96M  64.7MB/s    in 0.5s    
+kubectl                                 100%[=============================================================================>]  40.99M   113MB/s    in 0.4s    
+kube-proxy                              100%[=============================================================================>]  35.27M   185MB/s    in 0.2s    
+kubelet                                 100%[=============================================================================>] 114.10M   207MB/s    in 0.6s    
+```
+
+```
+efm@worker-0:~$ sudo mkdir -p \
+>   /etc/cni/net.d \
+>   /opt/cni/bin \
+>   /var/lib/kubelet \
+>   /var/lib/kube-proxy \
+>   /var/lib/kubernetes \
+>   /var/run/kubernetes
+```
+
+```
+efm@worker-0:~$ {
+>   mkdir containerd
+>   tar -xvf crictl-v1.15.0-linux-amd64.tar.gz
+>   tar -xvf containerd-1.2.9.linux-amd64.tar.gz -C containerd
+>   sudo tar -xvf cni-plugins-linux-amd64-v0.8.2.tgz -C /opt/cni/bin/
+>   sudo mv runc.amd64 runc
+>   chmod +x crictl kubectl kube-proxy kubelet runc 
+>   sudo mv crictl kubectl kube-proxy kubelet runc /usr/local/bin/
+>   sudo mv containerd/bin/* /bin/
+> }
+crictl
+bin/
+bin/containerd-shim-runc-v1
+bin/ctr
+bin/containerd
+bin/containerd-stress
+bin/containerd-shim
+./
+./flannel
+./ptp
+./host-local
+./firewall
+./portmap
+./tuning
+./vlan
+./host-device
+./bandwidth
+./sbr
+./static
+./dhcp
+./ipvlan
+./macvlan
+./loopback
+./bridge
+```
+
+```
+efm@worker-0:~$ POD_CIDR=$(curl -s -H "Metadata-Flavor: Google" \
+>   http://metadata.google.internal/computeMetadata/v1/instance/attributes/pod-cidr)
+```
+
+```
+efm@worker-0:~$ cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
+> {
+>     "cniVersion": "0.3.1",
+>     "name": "bridge",
+>     "type": "bridge",
+>     "bridge": "cnio0",
+>     "isGateway": true,
+>     "ipMasq": true,
+>     "ipam": {
+>         "type": "host-local",
+>         "ranges": [
+>           [{"subnet": "${POD_CIDR}"}]
+>         ],
+>         "routes": [{"dst": "0.0.0.0/0"}]
+>     }
+> }
+> EOF
+{
+    "cniVersion": "0.3.1",
+    "name": "bridge",
+    "type": "bridge",
+    "bridge": "cnio0",
+    "isGateway": true,
+    "ipMasq": true,
+    "ipam": {
+        "type": "host-local",
+        "ranges": [
+          [{"subnet": "10.200.0.0/24"}]
+        ],
+        "routes": [{"dst": "0.0.0.0/0"}]
+    }
+}
+```
+
+```
+efm@worker-0:~$ cat <<EOF | sudo tee /etc/cni/net.d/99-loopback.conf
+> {
+>     "cniVersion": "0.3.1",
+>     "name": "lo",
+>     "type": "loopback"
+> }
+> EOF
+{
+    "cniVersion": "0.3.1",
+    "name": "lo",
+    "type": "loopback"
+}
+```
+
+#### Configure containerd
+
+```
+efm@worker-0:~$ cat << EOF | sudo tee /etc/containerd/config.toml
+> [plugins]
+>   [plugins.cri.containerd]
+>     snapshotter = "overlayfs"
+>     [plugins.cri.containerd.default_runtime]
+>       runtime_type = "io.containerd.runtime.v1.linux"
+>       runtime_engine = "/usr/local/bin/runc"
+>       runtime_root = ""
+> EOF
+tee: /etc/containerd/config.toml: No such file or directory
+[plugins]
+  [plugins.cri.containerd]
+    snapshotter = "overlayfs"
+    [plugins.cri.containerd.default_runtime]
+      runtime_type = "io.containerd.runtime.v1.linux"
+      runtime_engine = "/usr/local/bin/runc"
+      runtime_root = ""
+```
+
+```
+efm@worker-0:~$ cat <<EOF | sudo tee /etc/systemd/system/containerd.service
+> [Unit]
+> Description=containerd container runtime
+> Documentation=https://containerd.io
+> After=network.target
+> 
+> [Service]
+> ExecStartPre=/sbin/modprobe overlay
+> ExecStart=/bin/containerd
+> Restart=always
+> RestartSec=5
+> Delegate=yes
+> KillMode=process
+> OOMScoreAdjust=-999
+> LimitNOFILE=1048576
+> LimitNPROC=infinity
+> LimitCORE=infinity
+> 
+> [Install]
+> WantedBy=multi-user.target
+> EOF
+[Unit]
+Description=containerd container runtime
+Documentation=https://containerd.io
+After=network.target
+
+[Service]
+ExecStartPre=/sbin/modprobe overlay
+ExecStart=/bin/containerd
+Restart=always
+RestartSec=5
+Delegate=yes
+KillMode=process
+OOMScoreAdjust=-999
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Configure the kubelet
+
+```
+efm@worker-0:~$ {
+>   sudo mv ${HOSTNAME}-key.pem ${HOSTNAME}.pem /var/lib/kubelet/
+>   sudo mv ${HOSTNAME}.kubeconfig /var/lib/kubelet/kubeconfig
+>   sudo mv ca.pem /var/lib/kubernetes/
+> }
+```
+
+```
+cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    enabled: true
+  x509:
+    clientCAFile: "/var/lib/kubernetes/ca.pem"
+authorization:
+  mode: Webhook
+clusterDomain: "cluster.local"
+clusterDNS:
+  - "10.32.0.10"
+podCIDR: "${POD_CIDR}"
+resolvConf: "/run/systemd/resolve/resolv.conf"
+runtimeRequestTimeout: "15m"
+tlsCertFile: "/var/lib/kubelet/${HOSTNAME}.pem"
+tlsPrivateKeyFile: "/var/lib/kubelet/${HOSTNAME}-key.pem"
+EOF
+```
+
+```
+efm@worker-0:~$ cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
+> kind: KubeletConfiguration
+> apiVersion: kubelet.config.k8s.io/v1beta1
+> authentication:
+>   anonymous:
+>     enabled: false
+>   webhook:
+>     enabled: true
+>   x509:
+>     clientCAFile: "/var/lib/kubernetes/ca.pem"
+> authorization:
+>   mode: Webhook
+> clusterDomain: "cluster.local"
+> clusterDNS:
+>   - "10.32.0.10"
+> podCIDR: "${POD_CIDR}"
+> resolvConf: "/run/systemd/resolve/resolv.conf"
+> runtimeRequestTimeout: "15m"
+> tlsCertFile: "/var/lib/kubelet/${HOSTNAME}.pem"
+> tlsPrivateKeyFile: "/var/lib/kubelet/${HOSTNAME}-key.pem"
+> EOF
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    enabled: true
+  x509:
+    clientCAFile: "/var/lib/kubernetes/ca.pem"
+authorization:
+  mode: Webhook
+clusterDomain: "cluster.local"
+clusterDNS:
+  - "10.32.0.10"
+podCIDR: "10.200.0.0/24"
+resolvConf: "/run/systemd/resolve/resolv.conf"
+runtimeRequestTimeout: "15m"
+tlsCertFile: "/var/lib/kubelet/worker-0.pem"
+tlsPrivateKeyFile: "/var/lib/kubelet/worker-0-key.pem
+```
+
+```
+efm@worker-0:~$ cat <<EOF | sudo tee /etc/systemd/system/kubelet.service
+> [Unit]
+> Description=Kubernetes Kubelet
+> Documentation=https://github.com/kubernetes/kubernetes
+> After=containerd.service
+> Requires=containerd.service
+> 
+> [Service]
+> ExecStart=/usr/local/bin/kubelet \\
+>   --config=/var/lib/kubelet/kubelet-config.yaml \\
+>   --container-runtime=remote \\
+>   --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \\
+>   --image-pull-progress-deadline=2m \\
+>   --kubeconfig=/var/lib/kubelet/kubeconfig \\
+>   --network-plugin=cni \\
+>   --register-node=true \\
+>   --v=2
+> Restart=on-failure
+> RestartSec=5
+> 
+> [Install]
+> WantedBy=multi-user.target
+> EOF
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/kubernetes/kubernetes
+After=containerd.service
+Requires=containerd.service
+
+[Service]
+ExecStart=/usr/local/bin/kubelet \
+  --config=/var/lib/kubelet/kubelet-config.yaml \
+  --container-runtime=remote \
+  --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \
+  --image-pull-progress-deadline=2m \
+  --kubeconfig=/var/lib/kubelet/kubeconfig \
+  --network-plugin=cni \
+  --register-node=true \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+efm@worker-0:~$ sudo mv kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
+```
+
+```
+efm@worker-0:~$ cat <<EOF | sudo tee /var/lib/kube-proxy/kube-proxy-config.yaml
+> kind: KubeProxyConfiguration
+> apiVersion: kubeproxy.config.k8s.io/v1alpha1
+> clientConnection:
+>   kubeconfig: "/var/lib/kube-proxy/kubeconfig"
+> mode: "iptables"
+> clusterCIDR: "10.200.0.0/16"
+> EOF
+kind: KubeProxyConfiguration
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+clientConnection:
+  kubeconfig: "/var/lib/kube-proxy/kubeconfig"
+mode: "iptables"
+clusterCIDR: "10.200.0.0/16"
+```
+
+```
+cat <<EOF | sudo tee /etc/systemd/system/kube-proxy.service
+[Unit]
+Description=Kubernetes Kube Proxy
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-proxy \\
+  --config=/var/lib/kube-proxy/kube-proxy-config.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+```
+
+```
+efm@worker-0:~$ {
+>   sudo systemctl daemon-reload
+>   sudo systemctl enable containerd kubelet kube-proxy
+>   sudo systemctl start containerd kubelet kube-proxy
+> }
+Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /etc/systemd/system/containerd.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/kubelet.service → /etc/systemd/system/kubelet.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/kube-proxy.service → /etc/systemd/system/kube-proxy.service.
+```
+
+## Verify worker nodes
+
+Back to laptop to verify
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ gcloud compute ssh controller-0 \
+>   --command "kubectl get nodes --kubeconfig admin.kubeconfig"
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+NAME       STATUS   ROLES    AGE     VERSION
+worker-0   Ready    <none>   6m23s   v1.15.3
+worker-1   Ready    <none>   45s     v1.15.3
+worker-2   Ready    <none>   41s     v1.15.3
+```
+
+
+```
+
+
+
+
 
 
 
