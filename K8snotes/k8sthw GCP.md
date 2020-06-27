@@ -145,6 +145,123 @@ Client Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.4", GitCom
 
 ```
 
+## Network setup
+
+```
+gcloud compute networks create kubernetes-the-hard-way --subnet-mode custom
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
+NAME                     SUBNET_MODE  BGP_ROUTING_MODE  IPV4_RANGE  GATEWAY_IPV4
+kubernetes-the-hard-way  CUSTOM       REGIONAL
+
+Instances on this network will not be reachable until firewall rules
+are created. As an example, you can allow all internal traffic between
+instances as well as SSH, RDP, and ICMP by running:
+
+$ gcloud compute firewall-rules create <FIREWALL_NAME> --network kubernetes-the-hard-way --allow tcp,udp,icmp --source-ranges <IP_RANGE>
+$ gcloud compute firewall-rules create <FIREWALL_NAME> --network kubernetes-the-hard-way --allow tcp:22,tcp:3389,icmp
+
+gcloud compute networks subnets create kubernetes \
+  --network kubernetes-the-hard-way \
+  --range 10.240.0.0/24
+
+gcloud compute networks subnets create kubernetes \
+>   --network kubernetes-the-hard-way \
+>   --range 10.240.0.0/24
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
+NAME        REGION       NETWORK                  RANGE
+kubernetes  us-central1  kubernetes-the-hard-way  10.240.0.0/24
+
+```
+
+### Firewall rules
+
+```
+gcloud compute firewall-rules create kubernetes-the-hard-way-allow-internal \
+  --allow tcp,udp,icmp \
+  --network kubernetes-the-hard-way \
+  --source-ranges 10.240.0.0/24,10.200.0.0/16
+
+
+gcloud compute firewall-rules create kubernetes-the-hard-way-allow-internal \
+>   --allow tcp,udp,icmp \
+>   --network kubernetes-the-hard-way \
+>   --source-ranges 10.240.0.0/24,10.200.0.0/16
+Creating firewall...⠹Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-internal].         
+Creating firewall...done.                                                                                                                                    
+NAME                                    NETWORK                  DIRECTION  PRIORITY  ALLOW         DENY  DISABLED
+kubernetes-the-hard-way-allow-internal  kubernetes-the-hard-way  INGRESS    1000      tcp,udp,icmp        False
+
+gcloud compute firewall-rules create kubernetes-the-hard-way-allow-external \
+  --allow tcp:22,tcp:6443,icmp \
+  --network kubernetes-the-hard-way \
+  --source-ranges 0.0.0.0/0
+
+  Creating firewall...⠹Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-external].         
+Creating firewall...done.                                                                                                                                    
+NAME                                    NETWORK                  DIRECTION  PRIORITY  ALLOW                 DENY  DISABLED
+kubernetes-the-hard-way-allow-external  kubernetes-the-hard-way  INGRESS    1000      tcp:22,tcp:6443,icmp        False
+
+gcloud compute firewall-rules list --filter="network:kubernetes-the-hard-way"
+
+gcloud compute firewall-rules list --filter="network:kubernetes-the-hard-way"
+NAME                                    NETWORK                  DIRECTION  PRIORITY  ALLOW                 DENY  DISABLED
+kubernetes-the-hard-way-allow-external  kubernetes-the-hard-way  INGRESS    1000      tcp:22,tcp:6443,icmp        False
+kubernetes-the-hard-way-allow-internal  kubernetes-the-hard-way  INGRESS    1000      tcp,udp,icmp                False
+
+To show all fields of the firewall, please show in JSON format: --format=json
+To show all fields in table format, please see the examples in --help.
+
+```
+
+### Static public IP
+
+```
+gcloud compute addresses create kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region)
+
+  Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/addresses/kubernetes-the-hard-way].
+  ```
+
+Verify
+
+```
+gcloud compute addresses list --filter="name=('kubernetes-the-hard-way')"
+NAME                     ADDRESS/RANGE  TYPE      PURPOSE  NETWORK  REGION       SUBNET  STATUS
+kubernetes-the-hard-way  34.72.53.87    EXTERNAL                    us-central1          RESERVED
+
+```
+
+### Create compute instances
+
+```
+for i in 0 1 2; do
+  gcloud compute instances create controller-${i} \
+    --async \
+    --boot-disk-size 200GB \
+    --can-ip-forward \
+    --image-family ubuntu-1804-lts \
+    --image-project ubuntu-os-cloud \
+    --machine-type n1-standard-1 \
+    --private-network-ip 10.240.0.1${i} \
+    --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
+    --subnet kubernetes \
+    --tags kubernetes-the-hard-way,controller
+done
+
+NOTE: The users will be charged for public IPs when VMs are created.
+Instance creation in progress for [controller-0]: https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/operations/operation-1593271489609-5a9126d2b3dd0-cc68cc0f-8d9f72fc
+Use [gcloud compute operations describe URI] command to check the status of the operation(s).
+NOTE: The users will be charged for public IPs when VMs are created.
+Instance creation in progress for [controller-1]: https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/operations/operation-1593271492295-5a9126d543abc-fa7daf5a-d1c34b36
+Use [gcloud compute operations describe URI] command to check the status of the operation(s).
+NOTE: The users will be charged for public IPs when VMs are created.
+Instance creation in progress for [controller-2]: https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/operations/operation-1593271494846-5a9126d7b2766-ae30ca2a-9ef9a5b2
+Use [gcloud compute operations describe URI] command to check the status of the operation(s).
+
+```
+
+
+
 
 
 
