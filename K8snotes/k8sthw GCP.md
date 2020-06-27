@@ -260,6 +260,37 @@ Use [gcloud compute operations describe URI] command to check the status of the 
 
 ```
 
+### Create worker nodes
+
+```
+for i in 0 1 2; do
+  gcloud compute instances create worker-${i} \
+    --async \
+    --boot-disk-size 200GB \
+    --can-ip-forward \
+    --image-family ubuntu-1804-lts \
+    --image-project ubuntu-os-cloud \
+    --machine-type n1-standard-1 \
+    --metadata pod-cidr=10.200.${i}.0/24 \
+    --private-network-ip 10.240.0.2${i} \
+    --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
+    --subnet kubernetes \
+    --tags kubernetes-the-hard-way,worker
+done
+
+NOTE: The users will be charged for public IPs when VMs are created.
+Instance creation in progress for [worker-0]: https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/operations/operation-1593271646793-5a9127689aeb7-cd2994d4-79d9e505
+Use [gcloud compute operations describe URI] command to check the status of the operation(s).
+NOTE: The users will be charged for public IPs when VMs are created.
+Instance creation in progress for [worker-1]: https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/operations/operation-1593271649386-5a91276b141d1-94de3e47-6abe69fa
+Use [gcloud compute operations describe URI] command to check the status of the operation(s).
+NOTE: The users will be charged for public IPs when VMs are created.
+Instance creation in progress for [worker-2]: https://www.googleapis.com/compute/v1/projects/k8sthw-280616/zones/us-central1-b/operations/operation-1593271651887-5a91276d76a25-1b44cddc-ade9a142
+Use [gcloud compute operations describe URI] command to check the status of the operation(s).
+```
+
+
+
 
 
 
