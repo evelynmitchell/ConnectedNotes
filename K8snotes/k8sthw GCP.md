@@ -3814,8 +3814,39 @@ kubernetes-route-10-200-1-0-24  kubernetes-the-hard-way  10.200.1.0/24  10.240.0
 kubernetes-route-10-200-2-0-24  kubernetes-the-hard-way  10.200.2.0/24  10.240.0.22               1000
 ```
 
+## Deploying the DNS cluster add<!-- markdownlint-configure-file 
 
+```
 
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl apply -f https://storage.googleapis.com/kubernetes-the-hard-way/coredns.yaml
+serviceaccount/coredns created
+clusterrole.rbac.authorization.k8s.io/system:coredns created
+clusterrolebinding.rbac.authorization.k8s.io/system:coredns created
+configmap/coredns created
+deployment.apps/coredns created
+service/kube-dns created
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl get pods -l k8s-app=kube-dns -n kube-system
+NAME                     READY   STATUS    RESTARTS   AGE
+coredns-5fb99965-bb8j7   1/1     Running   0          23s
+coredns-5fb99965-c7794   1/1     Running   0          23s
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl run --generator=run-pod/v1 busybox --image=busybox:1.28 --command -- sleep 3600
+Flag --generator has been deprecated, has no effect and will be removed in the future.
+pod/busybox created
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl get pods -l run=busybox
+NAME      READY   STATUS    RESTARTS   AGE
+busybox   1/1     Running   0          26s
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ POD_NAME=$(kubectl get pods -l run=busybox -o jsonpath="{.items[0].metadata.name}")
+
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl exec -ti $POD_NAME -- nslookup kubernetes
+Server:    10.32.0.10
+Address 1: 10.32.0.10 kube-dns.kube-system.svc.cluster.local
+
+Name:      kubernetes
+Address 1: 10.32.0.1 kubernetes.default.svc.cluster.local
 
 ```
 
