@@ -463,6 +463,62 @@ admin-csr.json  admin.pem      ca.csr          ca-key.pem   CONTRIBUTING.md  dep
 
 ```
 
+### kubelet client certificates
+
+```
+for instance in worker-0 worker-1 worker-2; do
+cat > ${instance}-csr.json <<EOF
+{
+  "CN": "system:node:${instance}",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:nodes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+EXTERNAL_IP=$(gcloud compute instances describe ${instance} \
+  --format 'value(networkInterfaces[0].accessConfigs[0].natIP)')
+
+INTERNAL_IP=$(gcloud compute instances describe ${instance} \
+  --format 'value(networkInterfaces[0].networkIP)')
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -hostname=${instance},${EXTERNAL_IP},${INTERNAL_IP} \
+  -profile=kubernetes \
+  ${instance}-csr.json | cfssljson -bare ${instance}
+done
+
+2020/06/27 09:52:11 [INFO] generate received request
+2020/06/27 09:52:11 [INFO] received CSR
+2020/06/27 09:52:11 [INFO] generating key: rsa-2048
+2020/06/27 09:52:11 [INFO] encoded CSR
+2020/06/27 09:52:11 [INFO] signed certificate with serial number 332524972477543552870317305068831231870986627701
+2020/06/27 09:52:14 [INFO] generate received request
+2020/06/27 09:52:14 [INFO] received CSR
+2020/06/27 09:52:14 [INFO] generating key: rsa-2048
+2020/06/27 09:52:14 [INFO] encoded CSR
+2020/06/27 09:52:14 [INFO] signed certificate with serial number 212964972211849591602119478588852920830888086269
+2020/06/27 09:52:17 [INFO] generate received request
+2020/06/27 09:52:17 [INFO] received CSR
+2020/06/27 09:52:17 [INFO] generating key: rsa-2048
+2020/06/27 09:52:18 [INFO] encoded CSR
+2020/06/27 09:52:18 [INFO] signed certificate with serial number 56738396642278894067004804745041309224421289106
+
+```
+
 
 
 
