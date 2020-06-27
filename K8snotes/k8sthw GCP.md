@@ -792,6 +792,24 @@ ca-key.pem      kube-controller-manager-key.pem   kubernetes-key.pem           s
 
 ``` 
 
+### Distribute certificates
+
+```
+for instance in worker-0 worker-1 worker-2; do   gcloud compute scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/; done
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+ca.pem                                                                                                                      100% 1318    29.4KB/s   00:00    
+worker-0-key.pem                                                                                                            100% 1679    40.7KB/s   00:00    
+worker-0.pem                                                                                                                100% 1493    40.8KB/s   00:00    
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+ca.pem                                                                                                                      100% 1318    37.2KB/s   00:00    
+worker-1-key.pem                                                                                                            100% 1675    39.0KB/s   00:00    
+worker-1.pem                                                                                                                100% 1493    37.8KB/s   00:00    
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+ca.pem                                                                                                                      100% 1318    34.7KB/s   00:00    
+worker-2-key.pem                                                                                                            100% 1675    38.2KB/s   00:00    
+worker-2.pem      
+```
+                                                    
 
 
 
