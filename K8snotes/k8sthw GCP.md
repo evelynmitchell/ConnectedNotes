@@ -1106,6 +1106,51 @@ kube-controller-manager.kubeconfig                                              
 kube-scheduler.kubeconfig                                                                                                   100% 6337    68.7KB/s   00:00    
 ```
 
+### Generating Data Encryption key
+
+Kubernetes stores a variety of data including cluster state, application configurations, and secrets. Kubernetes supports the ability to encrypt cluster data at rest.
+
+```
+ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
+```
+
+### Encryption Config File
+
+```
+cat > encryption-config.yaml <<EOF
+kind: EncryptionConfig
+apiVersion: v1
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: ${ENCRYPTION_KEY}
+      - identity: {}
+EOF
+```
+
+Interesting that those two steps are not similarly combined as the certificate generation steps were.
+
+```
+ more encryption-config.yaml 
+kind: EncryptionConfig
+apiVersion: v1
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: <sekrit=>
+      - identity: {}
+```
+
+
+
 
 
 
