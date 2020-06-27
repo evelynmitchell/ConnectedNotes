@@ -809,7 +809,103 @@ ca.pem                                                                          
 worker-2-key.pem                                                                                                            100% 1675    38.2KB/s   00:00    
 worker-2.pem      
 ```
-                                                    
+
+```
+for instance in controller-0 controller-1 controller-2; do
+>   gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+>     service-account-key.pem service-account.pem ${instance}:~/
+> done
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+ca.pem                                                                                                                      100% 1318    37.0KB/s   00:00    
+ca-key.pem                                                                                                                  100% 1675    41.2KB/s   00:00    
+kubernetes-key.pem                                                                                                          100% 1679    30.8KB/s   00:00    
+kubernetes.pem                                                                                                              100% 1663    40.6KB/s   00:00    
+service-account-key.pem                                                                                                     100% 1675    42.7KB/s   00:00    
+service-account.pem                                                                                                         100% 1440    33.8KB/s   00:00    
+Warning: Permanently added 'compute.4320877203762633259' (ECDSA) to the list of known hosts.
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+ca.pem                                                                                                                      100% 1318    33.5KB/s   00:00    
+ca-key.pem                                                                                                                  100% 1675    41.7KB/s   00:00    
+kubernetes-key.pem                                                                                                          100% 1679    46.5KB/s   00:00    
+kubernetes.pem                                                                                                              100% 1663    46.3KB/s   00:00    
+service-account-key.pem                                                                                                     100% 1675    42.3KB/s   00:00    
+service-account.pem                                                                                                         100% 1440    39.9KB/s   00:00    
+Warning: Permanently added 'compute.4767168148843190824' (ECDSA) to the list of known hosts.
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+ca.pem                                                                                                                      100% 1318    33.0KB/s   00:00    
+ca-key.pem                                                                                                                  100% 1675    43.0KB/s   00:00    
+kubernetes-key.pem                                                                                                          100% 1679    44.6KB/s   00:00    
+kubernetes.pem                                                                                                              100% 1663    45.7KB/s   00:00    
+service-account-key.pem                                                                                                     100% 1675    45.0KB/s   00:00    
+service-account.pem                                                                                                         100% 1440    40.6KB/s   00:00 
+```
+
+### Generating Kubernetes Configuration Files for Authentication
+
+```
+KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region) \
+  --format 'value(address)')
+
+set | more 
+KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+KUBERNETES_PUBLIC_ADDRESS=34.72.53.87
+```
+
+The following commands must be run in the same directory used to generate the SSL certificates during the Generating TLS Certificates lab
+
+```
+for instance in worker-0 worker-1 worker-2; do
+  kubectl config set-cluster kubernetes-the-hard-way \
+    --certificate-authority=ca.pem \
+    --embed-certs=true \
+    --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
+    --kubeconfig=${instance}.kubeconfig
+
+  kubectl config set-credentials system:node:${instance} \
+    --client-certificate=${instance}.pem \
+    --client-key=${instance}-key.pem \
+    --embed-certs=true \
+    --kubeconfig=${instance}.kubeconfig
+
+  kubectl config set-context default \
+    --cluster=kubernetes-the-hard-way \
+    --user=system:node:${instance} \
+    --kubeconfig=${instance}.kubeconfig
+
+  kubectl config use-context default --kubeconfig=${instance}.kubeconfig
+done
+
+Cluster "kubernetes-the-hard-way" set.
+User "system:node:worker-0" set.
+Context "default" created.
+Switched to context "default".
+Cluster "kubernetes-the-hard-way" set.
+User "system:node:worker-1" set.
+Context "default" created.
+Switched to context "default".
+Cluster "kubernetes-the-hard-way" set.
+User "system:node:worker-2" set.
+Context "default" created.
+Switched to context "default".
+
+ls 
+admin.csr       CONTRIBUTING.md                   kube-proxy-csr.json      kube-scheduler-key.pem    worker-0-csr.json    worker-2.csr
+admin-csr.json  COPYRIGHT.md                      kube-proxy-key.pem       kube-scheduler.pem        worker-0-key.pem     worker-2-csr.json
+admin-key.pem   deployments                       kube-proxy.pem           LICENSE                   worker-0.kubeconfig  worker-2-key.pem
+admin.pem       docs                              kubernetes.csr           README.md                 worker-0.pem         worker-2.kubeconfig
+ca-config.json  kube-controller-manager.csr       kubernetes-csr.json      service-account.csr       worker-1.csr         worker-2.pem
+ca.csr          kube-controller-manager-csr.json  kubernetes-key.pem       service-account-csr.json  worker-1-csr.json
+ca-csr.json     kube-controller-manager-key.pem   kubernetes.pem           service-account-key.pem   worker-1-key.pem
+ca-key.pem      kube-controller-manager.pem       kube-scheduler.csr       service-account.pem       worker-1.kubeconfig
+ca.pem          kube-proxy.csr                    kube-scheduler-csr.json  worker-0.csr              worker-1.pem
+
+```
+
+
+
+
+
 
 
 
