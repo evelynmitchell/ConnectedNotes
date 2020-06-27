@@ -303,6 +303,41 @@ worker-1      us-central1-b  n1-standard-1               10.240.0.21  35.226.118
 worker-2      us-central1-b  n1-standard-1               10.240.0.22  35.232.160.221   RUNNING
 ```
 
+### Configure SSH access
+
+```
+gcloud compute ssh controller-0
+```
+
+There was a key creation and password setup which I will not include here
+
+```
+gcloud compute ssh controller-0
+Enter passphrase for key '/home/efm/.ssh/google_compute_engine': 
+Welcome to Ubuntu 18.04.4 LTS (GNU/Linux 5.3.0-1029-gcp x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Sat Jun 27 15:34:34 UTC 2020
+
+  System load:  0.03               Processes:           95
+  Usage of /:   0.7% of 193.66GB   Users logged in:     0
+  Memory usage: 5%                 IP address for ens4: 10.240.0.10
+  Swap usage:   0%
+
+
+0 packages can be updated.
+0 updates are security updates.
+
+
+efm@controller-0:~$ 
+```
+
+### I'm In
+
+
 
 
 
