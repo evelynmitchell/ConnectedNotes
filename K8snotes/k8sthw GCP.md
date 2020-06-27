@@ -2996,6 +2996,149 @@ gcloud init
 
 To login, set the project and the compute region.
 
+Re-opened a connection to each of  the controllers-{0,1,2}
+Checked health on all 3 controllers
+
+```
+kubectl get componentstatuses --kubeconfig admin.kubeconfig
+NAME                 STATUS    MESSAGE             ERROR
+controller-manager   Healthy   ok                  
+etcd-0               Healthy   {"health":"true"}   
+scheduler            Healthy   ok                  
+etcd-2               Healthy   {"health":"true"}   
+etcd-1               Healthy   {"health":"true"}   
+```
+
+Then checked the nginx health proxy.
+
+```
+curl -H "Host: kubernetes.default.svc.cluster.local" -i http://127.0.0.1/healthz
+
+```
+
+### RBAC
+
+Run on only one of the controllers.
+
+```
+efm@controller-0:~$ cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
+> apiVersion: rbac.authorization.k8s.io/v1beta1
+> kind: ClusterRole
+> metadata:
+>   annotations:
+>     rbac.authorization.kubernetes.io/autoupdate: "true"
+>   labels:
+>     kubernetes.io/bootstrapping: rbac-defaults
+>   name: system:kube-apiserver-to-kubelet
+> rules:
+>   - apiGroups:
+>       - ""
+>     resources:
+>       - nodes/proxy
+>       - nodes/stats
+>       - nodes/log
+>       - nodes/spec
+>       - nodes/metrics
+>     verbs:
+>       - "*"
+> EOF
+clusterrole.rbac.authorization.k8s.io/system:kube-apiserver-to-kubelet unchanged
+```
+
+I had run that before lunch, so unchanged is correct.
+
+```
+efm@controller-0:~$ cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
+> apiVersion: rbac.authorization.k8s.io/v1beta1
+> kind: ClusterRoleBinding
+> metadata:
+>   name: system:kube-apiserver
+>   namespace: ""
+> roleRef:
+>   apiGroup: rbac.authorization.k8s.io
+>   kind: ClusterRole
+>   name: system:kube-apiserver-to-kubelet
+> subjects:
+>   - apiGroup: rbac.authorization.k8s.io
+>     kind: User
+>     name: kubernetes
+> EOF
+clusterrolebinding.rbac.authorization.k8s.io/system:kube-apiserver unchanged
+```
+
+That also looks ok.
+
+Back to running commands on my laptop, which was used to provision the instances.
+
+```
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ kubectl get componentstatuses --kubeconfig admin.kubeconfig
+The connection to the server 127.0.0.1:6443 was refused - did you specify the right host or port?
+efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ {
+>   KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+>     --region $(gcloud config get-value compute/region) \
+>     --format 'value(address)')
+> 
+>   gcloud compute http-health-checks create kubernetes \
+>     --description "Kubernetes Health Check" \
+>     --host "kubernetes.default.svc.cluster.local" \
+>     --request-path "/healthz"
+> 
+>   gcloud compute firewall-rules create kubernetes-the-hard-way-allow-health-check \
+>     --network kubernetes-the-hard-way \
+>     --source-ranges 209.85.152.0/22,209.85.204.0/22,35.191.0.0/16 \
+>     --allow tcp
+> 
+>   gcloud compute target-pools create kubernetes-target-pool \
+>     --http-health-check kubernetes
+> 
+>   gcloud compute target-pools add-instances kubernetes-target-pool \
+>    --instances controller-0,controller-1,controller-2
+> 
+>   gcloud compute forwarding-rules create kubernetes-forwarding-rule \
+>     --address ${KUBERNETES_PUBLIC_ADDRESS} \
+>     --ports 6443 \
+>     --region $(gcloud config get-value compute/region) \
+>     --target-pool kubernetes-target-pool
+> }
+ERROR: (gcloud.compute.http-health-checks.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/global/httpHealthChecks/kubernetes' already exists
+
+Creating firewall...failed.                                                                                                                                  
+ERROR: (gcloud.compute.firewall-rules.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/global/firewalls/kubernetes-the-hard-way-allow-health-check' already exists
+
+ERROR: (gcloud.compute.target-pools.create) Could not fetch resource:
+ - The resource 'projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool' already exists
+
+Updated [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/targetPools/kubernetes-target-pool].
+Created [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/forwardingRules/kubernetes-forwarding-rule].
+
+#### Verify
+
+```
+KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region) \
+  --format 'value(address)')
+
+  efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+>   --region $(gcloud config get-value compute/region) \
+>   --format 'value(address)')
+
+curl --cacert ca.pem https://${KUBERNETES_PUBLIC_ADDRESS}:6443/version
+{
+  "major": "1",
+  "minor": "15",
+  "gitVersion": "v1.15.3",
+  "gitCommit": "2d3c76f9091b6bec110a5e63777c332469e0cba2",
+  "gitTreeState": "clean",
+  "buildDate": "2019-08-19T11:05:50Z",
+  "goVersion": "go1.12.9",
+  "compiler": "gc",
+  "platform": "linux/amd64"
+```
+
+
+
 
 
 
