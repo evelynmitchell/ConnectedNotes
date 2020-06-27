@@ -112,4 +112,16 @@ Available commands for gcloud:
       survey                  Invoke a customer satisfaction survey for Cloud
                               SDK.
 
-```
+  SDK Tools
+      feedback                Provide feedback to the Google Cloud SDK team.
+      help                    Search gcloud help text.
+      info                    Display information about the current gcloud
+                              environment.
+      init                    Initialize or reinitialize gcloud.
+      version                 Print version information for Cloud SDK
+                              components.
+
+                          
+
+
+
