@@ -2765,7 +2765,7 @@ kubernetes-route-10-200-1-0-24  kubernetes-the-hard-way  10.200.1.0/24  10.240.0
 kubernetes-route-10-200-2-0-24  kubernetes-the-hard-way  10.200.2.0/24  10.240.0.22               1000
 ```
 
-## Deploying the DNS cluster add<!-- markdownlint-configure-file 
+## Deploying the DNS cluster 
 
 ```
 
@@ -2967,6 +2967,7 @@ Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/rou
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
 ```
+
 
 
 
