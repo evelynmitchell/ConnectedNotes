@@ -137,9 +137,8 @@ kubectl
 
 Command 'kubectl' not found, but can be installed with:
 
-sudo snap install kubectl
+sudo snap install kubectl 
 
-```
 sudo snap install kubectl --classic
 kubectl 1.18.4 from Canonical✓ installed
 
@@ -4019,6 +4018,7 @@ Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/rou
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
 ```
+
 
 
 
