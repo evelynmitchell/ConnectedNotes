@@ -1620,9 +1620,13 @@ Content-Length: 2
 Connection: keep-alive
 X-Content-Type-Options: nosniff
 
+```
+
 ### RBAC for Kubelet Authorization
 
 ```
+
+
 cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
@@ -2963,6 +2967,7 @@ Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/rou
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
 ```
+
 
 
 
