@@ -3,7 +3,10 @@ k8sthw GCP
 Created two Ubuntu 20.04 VMs
 Forked https://github.com/evelynmitchell/kubernetes-the-hard-way
 Installed gcloud 
+
+```
    # sudo snap install google-cloud-sdk --classic
+```
 The snap needs extra priviledges, thus --classic
 
 ```
@@ -4016,6 +4019,7 @@ Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/rou
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
 ```
+
 
 
 
