@@ -2282,8 +2282,7 @@ efm@worker-0:~$ {
 > }
 Hit:1 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic InRelease
 Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu bionic-updates InRelease [88.7 kB]                   
-...
-```
+
 
 efm@worker-0:~$ wget -q --show-progress --https-only --timestamping \
 >   https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.15.0/crictl-v1.15.0-linux-amd64.tar.gz \
@@ -2968,6 +2967,7 @@ Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/rou
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
 ```
+
 
 
 
