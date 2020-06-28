@@ -1939,7 +1939,7 @@ efm@efm:~/Development/SysADmin/Kubernetesk8s/kubernetes-the-hard-way$ curl --cac
 ```
 That command timed out, and I don't know why. My guess is that my gcloud init connection timed out after 3 hours.
 
-Took lunch, came benchmark.md
+Took lunch. When I came back after rebooting, my network was fine.
 
 ```
 gcloud init
@@ -2967,6 +2967,7 @@ Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/rou
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/regions/us-central1/subnetworks/kubernetes].
 Deleted [https://www.googleapis.com/compute/v1/projects/k8sthw-280616/global/networks/kubernetes-the-hard-way].
 ```
+
 
 
 
