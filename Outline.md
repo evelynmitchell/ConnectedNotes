@@ -2,6 +2,9 @@
 
 ## Kubernetes
 
-### Certified Kubernetes Administrator [[CKAnotes]]
+### Certified Kubernetes Administrator 
+
+## Kubernetes the Hard way notes
+[[K8SNotes/]]
 
 
