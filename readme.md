@@ -1,3 +1,7 @@
+# Connected Notes 
+
+based on a Visual Studio set of plugins called Foam, designed to emulate Roam notebooks.
+
 # Foam
 
 From: https://foambubble.github.io/foam/
