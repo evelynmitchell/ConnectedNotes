@@ -2,6 +2,34 @@ gcloud
 
 Command name argument expected.
 ```
+gcloud GROUP | COMMAND [--account=ACCOUNT]
+        [--billing-project=BILLING_PROJECT] [--configuration=CONFIGURATION]
+        [--flags-file=YAML_FILE] [--flatten=[KEY,...]] [--format=FORMAT]
+        [--help] [--project=PROJECT_ID] [--quiet, -q]
+        [--verbosity=VERBOSITY; default="warning"] [--version, -v] [-h]
+        [--impersonate-service-account=SERVICE_ACCOUNT_EMAIL] [--log-http]
+        [--trace-token=TRACE_TOKEN] [--no-user-output-enabled]
+
+GROUP is to limit the scope of the command to a related set of tasks, permissions or resources. Examples of groups include auth: to manage oauth2 tokens, container: to manage container resources, kms to manage keys. Most uses of cloud will include a Group.
+
+COMMAND are rarely used. init on initial setup, and info to get information about the gcloud setup. 
+
+You will have to run gcloud init on every new session. There may be a way to save the configuration.
+   gcloud topic configurations
+      collections of key-value pairs
+        default zone, verbosity, project id, active user or service account.
+             gcloud config configurations create my-config
+      find the path to the active config 
+         gcloud info --format="get(config.paths.active_config_path)"
+         gcloud config list
+         gcloud config set
+         
+gcloud --help` to see the Cloud Platform services you can interact with. And run `gcloud help COMMAND` to get help on any gcloud command.
+Run `gcloud topic --help` to learn about advanced features of the SDK like arg files and output formatting
+
+
+```
+```
 Available command groups for gcloud:
 
   AI and Machine Learning
