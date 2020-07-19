@@ -1,0 +1,21 @@
+cfssl : Cloudflare PKI TLS tool
+
+https://github.com/cloudflare/cfssl
+
+I learned about this from Kelsey Hightower's Learn Kubernetes the Hard Way.
+It's an alternative tool to OpenSSL for certificate management.
+
+In k8sthw, it is used to create the server and client certificates, which is also called "provision the PII infrastructure".
+PKI here means Public Key infrastructure.
+
+What are the tasks of creating a PKI?
+
+Generate keys.
+Create a Certificate, which has appropriate identification and duration.
+Use key to sign the certificate (CSR, Certificate Signing Request)
+Distribute the Signed Certificates to the Clients
+Rotate the Certificates prior to expiry, or on revocation 
+
+```
+
+
