@@ -1,0 +1,29 @@
+Ansible
+
+https://docs.ansible.com/ansible/latest/user_guide/index.html
+
+## Concepts
+
+From the Control Node, which could be your laptop, or a separate system, which is able to reach the Managed nodes via ssh, run Playbooks to perform Tasks through Modules, on a set of systems labeled in an Inventory.
+The Inventory is scoped per directory. So when you are in /foo/bar you are working with that inventory, and when you are in /foo, a different inventory.
+
+Copy ssh keys to the managed node.
+
+
+### Control Node
+
+### Managed Nodes
+
+### Inventory
+
+### Modules
+
+### Tasks
+
+### Playbooks
+
+
+
+Debug
+
+print standard output
