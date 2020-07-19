@@ -28,7 +28,7 @@ gcloud --help` to see the Cloud Platform services you can interact with. And run
 Run `gcloud topic --help` to learn about advanced features of the SDK like arg files and output formatting
 
 
-```
+
 ```
 Available command groups for gcloud:
 
@@ -86,10 +86,12 @@ Available command groups for gcloud:
       kms                     Manage cryptographic keys in the cloud.
       policy-troubleshoot     Troubleshoot Google Cloud Platform policies.
       resource-manager        Manage Cloud Resources.
-      secrets                 Manage secrets on Google Cloud.
-
-  Internet of Things
-      iot                     Manage Cloud IoT resources.
+      secrets                 Manage secrets on Google Cloud.Pick cloud project to use: 
+ [1] firstproject-255323
+ [2] k8splayground-277617
+ [3] make4covid
+ [4] math-playground-181015
+ [5] Create a new project
 
   Management Tools
       builds                  Create and manage builds for Google Cloud Build.
@@ -149,7 +151,169 @@ Available commands for gcloud:
       version                 Print version information for Cloud SDK
                               components.
 
-                          
+## Cheat sheet
+
+```
+gcloud cheat-sheet
+  Getting started
+    Get going with the gcloud command-line tool
+
+      ▪ gcloud init: Initialize, authorize, and configure the gcloud tool.
+      ▪ gcloud version: Display version and installed components.
+      ▪ gcloud components install: Install specific components.
+      ▪ gcloud components update: Update your Cloud SDK to the latest
+        version.
+      ▪ gcloud config set project: Set a default Google Cloud project to work
+        on.
+      ▪ gcloud info: Display current gcloud tool environment details.
+```
+
+It's possible to have multiple accounts set up and switch between them, in gcloud init, by doing the url authentication dance from a different logged in browser.
+
+```
+gcloud auth list
+
+gcloud config set account `ACCOUNT`
+```
+
+### Container and cluster management in gcloud
+
+```
+  Docker & Google Kubernetes Engine (GKE)
+    Manage containerized applications on Kubernetes
+
+      ▪ gcloud auth configure-docker: Register the gcloud tool as a Docker
+        credential helper.
+      ▪ gcloud container clusters create: Create a cluster to run GKE
+        containers.
+      ▪ gcloud container clusters list: List clusters for running GKE
+        containers.
+      ▪ gcloud container clusters get-credentials: Update kubeconfig to get
+        kubectl to use a GKE cluster.
+      ▪ gcloud container images list-tags: List tag and digest metadata for a
+        container image.
+
+```
+
+Interesting that gcloud can be set up as a docker credentials helper (a local store of credentials which are passed into a container).
+
+```
+gcloud container clusters list
+```
+lists clusters as expected.
+NAME              LOCATION    MASTER_VERSION  MASTER_IP       MACHINE_TYPE   NODE_VERSION    NUM_NODES  STATUS
+
+```
+gcloud container clusters get-credentials nginx102-cluster  --zone us-west1-c
+```
+
+### list images
+
+```
+gcloud container images list
+Listed 0 items.
+Only listing images in gcr.io/k8splayground-277617. Use --repository to list images in other repositories.
+efm@efm:~/.kube$ gcloud container images list --repository
+ERROR: (gcloud.container.images.list) argument --repository: expected one argument
+Usage: gcloud container images list [optional flags]
+  optional flags may be  --filter | --help | --limit | --page-size |
+                         --repository | --sort-by | --uri
+
+For detailed information on this command and its flags, run:
+  gcloud container images list --help
+```
+There aren't any images. Which means we have no image repo set up.
+
+## VMs and compute
+
+```
+gcloud compute instances list
+NAME                                             ZONE        MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP     STATUS
+gke-networklb-default-pool-fa378575-54k3         us-west1-b  n1-standard-1               10.138.0.13  xx  RUNNING
+gke-networklb-default-pool-fa378575-5rjb         us-west1-b  n1-standard-1               10.138.0.14  xx4    RUNNING
+gke-networklb-default-pool-fa378575-c6mc         us-west1-b  n1-standard-1               10.138.0.12  3xx    RUNNING
+gke-nginx102-cluster-default-pool-7e39b435-4bw4  us-west1-c  n1-standard-1               10.138.0.40  3xx6.29    RUNNING
+gke-nginx102-cluster-default-pool-7e39b435-hx0z  us-west1-c  n1-standard-1               10.138.0.39  xx1   RUNNING
+gke-nginx102-cluster-default-pool-7e39b435-pmq3  us-west1-c  n1-standard-1               10.138.0.41  3x3  RUNNING
+```
+
+### SSH into VM
+
+```
+gcloud compute ssh root@gke-nginx102-cluster-default-pool-7e39b435-4bw4 --zone us-west1-c
+```
+
+## Logging
+
+### List the logs
+```
+gcloud logging logs list
+projects/k8splayground-277617/logs/cloudaudit.googleapis.com%2Factivity
+projects/k8splayground-277617/logs/cloudaudit.googleapis.com%2Fsystem_event
+projects/k8splayground-277617/logs/compute.googleapis.com%2Factivity_log
+projects/k8splayground-277617/logs/compute.googleapis.com%2Fshielded_vm_integrity
+projects/k8splayground-277617/logs/container-runtime
+projects/k8splayground-277617/logs/docker
+projects/k8splayground-277617/logs/events
+projects/k8splayground-277617/logs/kube-container-runtime-monitor
+projects/k8splayground-277617/logs/kube-node-configuration
+projects/k8splayground-277617/logs/kube-node-installation
+projects/k8splayground-277617/logs/kube-proxy
+projects/k8splayground-277617/logs/kubelet
+projects/k8splayground-277617/logs/kubelet-monitor
+projects/k8splayground-277617/logs/node-problem-detector
+projects/k8splayground-277617/logs/requests
+projects/k8splayground-277617/logs/stderr
+projects/k8splayground-277617/logs/stdout
+```
+
+### Read the logs
+
+
+
+```
+gcloud logging read projects/k8splayground-277617/logs/stdout
+---
+insertId: 86lib8lk0py4itwow
+jsonPayload:
+  data:
+    command: forward-worker
+    remote: 10.16.2.44:59640
+    session: 23056.4.1.102
+    worker-address: 10.16.2.43:39149
+    worker-platform: linux
+    worker-tags: ''
+  level: info
+  message: tsa.connection.channel.command.heartbeat.done
+  source: tsa
+  timestamp: '2020-07-14T20:29:47.404276778Z'
+labels:
+  k8s-pod/app: concourse-1594669118-web
+  k8s-pod/pod-template-hash: 59cf68db98
+  k8s-pod/release: concourse-1594669118
+logName: projects/k8splayground-277617/logs/stdout
+receiveTimestamp: '2020-07-14T20:29:53.583099684Z'
+resource:
+  labels:
+    cluster_name: nginx102-cluster
+    container_name: concourse-1594669118-web
+    location: us-west1-c
+    namespace_name: default
+    pod_name: concourse-1594669118-web-59cf68db98-rhl4c
+    project_id: k8splayground-277617
+  type: k8s_container
+severity: INFO
+timestamp: '2020-07-14T20:29:47.404536087Z'
+...
+```
+### ACL
+
+https://cloud.google.com/storage/docs/access-control/lists
+
+# TODO
+[ ] Set up k8splayground image repository
+
+
 
 
 
