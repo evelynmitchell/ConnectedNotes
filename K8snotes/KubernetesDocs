@@ -2,3 +2,117 @@ KubernetesDocs
 
 https://kubernetes.io/docs/home/
 
+## reference
+https://www.k8sref.io/
+
+## tooling
+
+### plugins for kubectl
+
+<https://github.com/kubernetes-sigs/krew-index/blob/master/plugins.md>
+
+### ide
+
+https://k8slens.dev/
+
+### internal vpn
+<https://docs.cilium.io/en/v1.8/intro/>
+
+
+### monitoring with BPF
+
+<https://speakerdeck.com/leodido/cloud-native-ebpf-instrumentation?slide=20>
+kube-cattle
+https://github.com/iovisor/kubectl-trace
+https://github.com/bpftools/kube-bpf
+
+## debugging
+
+###CrashLoopBackoff
+
+<https://www.krenger.ch/blog/crashloopbackoff-and-how-to-fix-it/>
+
+The container is crashing before the tty is established, so k8s gets into a loop restarting it, but detects
+the loop and stops.
+
+You need to figure out what is causing the container crash, and fix that
+
+```
+$ oc project my-project-2
+$ oc logs --previous myapp-simon-43-7macd
+```
+
+```
+kubectl logs <name>
+kubectl describe <name>
+```
+
+### ImagePullBackOff
+
+The container registry (often dockerhub) is unavailable after repeated image pulls.
+
+The fix is to have a local registry to pull from, which should have higher availablity.
+
+In order to give the local registry preference, you need to tag the container to pull from there:
+```
+docker tag aii localhost:5000/dev/aii
+docker push localhost:5000/dev/aii
+```
+"change run-aii.yaml to use the localhost:5000/dev/aii image instead of aii"
+
+<https://managedkube.com/kubernetes/k8sbot/troubleshooting/imagepullbackoff/2019/02/23/imagepullbackoff.html>
+
+## Ingress troubleshooting
+
+<https://managedkube.com/kubernetes/trace/ingress/service/port/not/matching/pod/k8sbot/2019/02/13/trace-ingress.html?>
+
+If you can't reach your endpoint there are several layers where the problem may have arisen.
+Knowing the layers is essential to unraveling the path, which will help you discover the root cause of the 
+problem and fix it.
+
+## Out of Resource
+
+https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/
+
+
+<https://stackoverflow.com/questions/35453704/how-to-clear-crashloopbackoff>
+
+
+### 
+
+## Security 
+
+<https://github.com/freach/kubernetes-security-best-practice#kubernetes-security---best-practice-guide>
+
+<https://github.com/kubernetes/kubernetes/issues/92315>
+
+Set sysctl s
+<https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/>
+This is an unusual setting for a container, and should require special justification and permission.
+It may make more sense to do this sort of thing in a privileged sidecar container.
+
+
+## Objects
+
+Reference: <https://cloud.google.com/apis/design/glossary>
+
+
+## Access CLI
+
+To multiple clusters <https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/>
+
+### API Service
+
+A deployed version of an API, deployed as a service.
+
+### Custom Resource Definion CRD
+
+<https://dzone.com/articles/understanding-and-building-kubernetes-custom-resou>
+ConfigMap alternative.
+
+## Storage
+
+https://kubernetes.io/docs/concepts/storage/
+
+Cloning Persistent Volumes
+https://kubernetes.io/docs/concepts/storage/volume-pvc-datasource/
