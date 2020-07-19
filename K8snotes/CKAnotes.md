@@ -1,23 +1,22 @@
-CKAnotes
+# CKAnotes
 
-# Certified Kubernetes Administrator
+## Certified Kubernetes Administrator
 
 ## Cluster Architecture
 
-All definition files for k8s are written in [[YAML]]. Use [[yamllint]] or pyyaml to help with checking your format. http://www.yamllint.com/
-
+All definition files for k8s are written in [[YAML]]. Use [[yamllint]] or pyyaml to help with checking your format. <http://www.yamllint.com/>
 
 Internet -> Ingress
   Internet may be a Content Delivery Network (CDN)
 
 ### Ingress description
+
   The static IP location which proxies the more dynamically allocated Services, which proxy the very dynamically allocated VMs, and containers.
 
-  May be of several types, the standard Ingress and igress-nginx (which is more like a load balancer). 
-  I'm not sure how istio, fabric or other service meshes fit in, but likely they exist not at this layer, which is fairly static, 
-  or at the pod layer, which is more at the hardware layer, but at the service layer.
+  May be of several types, the standard Ingress and igress-nginx (which is more like a load balancer).
+  I'm not sure how istio, fabric or other service meshes fit in, but likely they exist not at this layer, which is fairly static, or at the pod layer, which is more at the hardware layer, but at the service layer.
 
-  ```
+```yaml
   Ingress
      node1
         service1
@@ -33,13 +32,15 @@ Internet -> Ingress
         service2
 ```
 
-Need both an ingress controller, and an ingress resource. [[Resources]] are the hardware required to do the thing. An ingress resource will include a rewrite rule 
-to pass traffic to a service. [[Controller]]s are the description of the desired state of the resource, 
-similar to a puppet module or ansible playbook. The Controller ensures that the right number and location of resources are available.
+Need both an ingress controller, and an ingress resource.
+
+[[Resources]] are the hardware required to do the thing. An ingress resource will include a rewrite rule to pass traffic to a service.
+
+[[Controller]]s are the description of the desired state of the resource, similar to a puppet module or ansible playbook. The Controller ensures that the right number and location of resources are available.
 
 Example ingress controller nginx (yaml):
 
-```
+```yaml
     apiVersion: networking.k8s.io/v1beta1
     kind: Ingress
     metadata:
@@ -59,7 +60,7 @@ Example ingress controller nginx (yaml):
 
 Example ingress controller (GCE):
 
-```
+```yaml
     apiVersion: networking.k8s.io/v1beta1
     kind: Ingress
     metadata:
@@ -81,18 +82,14 @@ Example ingress controller (GCE):
               servicePort: 80
 ```
 
-In both of those controllers, traffic coming into the ingress IP gets routed to http server paths (/testpath, /, /discounted), 
-which are served by different services (test, my-products, my-discounted-products), which could be running on containers or
+In both of those controllers, traffic coming into the ingress IP gets routed to http server paths (/testpath, /, /discounted), which are served by different services (test, my-products my-discounted-products), which could be running on containers or
 virtual machines.
 
-Ingress abstracts away from the public internet, the particular implementation of your services. This allows for more dramatic
-and flexible implementations without change on the part of the clients. It also abstracts your services from the hardware 
-required to implement it, as the IP routing happens at the service level, not at the switch (hardware ports and cables) or VLAN
-(overylay networks) level.
+Ingress abstracts away from the public internet, the particular implementation of your services. This allows for more dramatic and flexible implementations without change on the part of the clients. It also abstracts your services from the hardware required to implement it, as the IP routing happens at the service level, not at the switch (hardware ports and cables) or VLAN (overylay networks) level.
 
 #### Ingress commands
 
-```
+```bash
 kubectl
 ```
 
@@ -109,6 +106,3 @@ kubectl
 - Node : a virtual or physical machine which runs services. Abstracted by Pods. May be in different Availability Zones, or in different data centers, or at different cloud providers.
 
 - Pod : a logical grouping of nodes to provide storage, RAM and compute sufficient to provision a related group of services. See also Deployment.
-
-
-
