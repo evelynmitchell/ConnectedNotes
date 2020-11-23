@@ -8,7 +8,7 @@ Use a binned table of paper x comprehension.
 
 paper[url]  [ ] 0-20% [ ] to 40% [ ] to 60% [ ] to 80% [ ] to 100%
 
-whee 0-20% means learning vocabulary
+where 0-20% means learning vocabulary
 to 40% means vocabulary in simple examples
 to 60% means vocabulary in composition of simple examples
 to 80% means novel examples
