@@ -13,7 +13,7 @@ to 40% means vocabulary in simple examples
 to 60% means vocabulary in composition of simple examples
 to 80% means novel examples
 to 100% means do something beyond 
-,https://towardsdatascience.com/how-you-should-read-research-papers-according-to-andrew-ng-stanford-deep-learning-lectures-98ecbd3ccfb3>
+</towardsdatascience.com/how-you-should-read-research-papers-according-to-andrew-ng-stanford-deep-learning-lectures-98ecbd3ccfb3>
 5-20 papers for beginning understanding 50-100 papers for deep understanding
 
 "The third step is to take structured notes that summarises the key discoveries, findings and techniques within a paper, in your own words"
